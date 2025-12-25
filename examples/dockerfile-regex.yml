@@ -1,0 +1,61 @@
+# Example: Extract Version from Dockerfile using Regex
+
+name: Check Docker Base Image Versions
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Daily
+  workflow_dispatch:
+
+jobs:
+  check-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check Python Version in Dockerfile
+        uses: broadsage/endoflife-action@v2
+        with:
+          products: 'python'
+          file-path: 'Dockerfile'
+          version-regex: 'FROM python:([0-9.]+)'
+          fail-on-eol: true
+          create-issue-on-eol: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  check-alpine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check Alpine Version in Dockerfile
+        uses: broadsage/endoflife-action@v2
+        with:
+          products: 'alpine'
+          file-path: 'Dockerfile'
+          version-regex: 'FROM alpine:([0-9.]+)'
+          fail-on-approaching-eol: true
+          eol-threshold-days: 90
+
+  check-nodejs-dockerfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check Node.js Version in Dockerfile
+        id: check
+        uses: broadsage/endoflife-action@v2
+        with:
+          products: 'nodejs'
+          file-path: 'backend/Dockerfile'
+          version-regex: 'FROM node:([0-9]+)'
+          semantic-version-fallback: true
+          output-format: 'markdown'
+          output-file: 'eol-report.md'
+      
+      - name: Upload Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eol-report
+          path: eol-report.md

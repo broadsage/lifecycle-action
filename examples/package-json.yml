@@ -1,0 +1,40 @@
+# Example: Extract Version from package.json
+
+name: Check Node.js Version
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check-nodejs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check Node.js Version from package.json
+        uses: broadsage/endoflife-action@v2
+        with:
+          products: 'nodejs'
+          file-path: 'package.json'
+          file-key: 'engines.node'
+          file-format: 'json'
+          fail-on-eol: true
+          output-format: 'summary'
+
+  check-npm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check npm Version
+        uses: broadsage/endoflife-action@v2
+        with:
+          products: 'npm'
+          file-path: 'package.json'
+          file-key: 'engines.npm'
+          file-format: 'json'
+          fail-on-approaching-eol: true
+          eol-threshold-days: 180

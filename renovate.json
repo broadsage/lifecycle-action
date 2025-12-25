@@ -1,0 +1,191 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "config:recommended",
+        ":dependencyDashboard",
+        ":semanticCommits",
+        ":separateMajorReleases",
+        "group:allNonMajor"
+    ],
+    "labels": [
+        "dependencies"
+    ],
+    "assignees": [
+        "@broadsage/maintainers"
+    ],
+    "reviewers": [
+        "@broadsage/maintainers"
+    ],
+    "timezone": "Asia/Kolkata",
+    "schedule": [
+        "before 10am on monday"
+    ],
+    "prConcurrentLimit": 5,
+    "prHourlyLimit": 2,
+    "commitMessagePrefix": "chore(deps):",
+    "commitMessageAction": "update",
+    "commitMessageTopic": "{{depName}}",
+    "commitMessageExtra": "to {{#if isPinDigest}}{{{newDigestShort}}}{{else}}{{#if isMajor}}{{prettyNewMajor}}{{else}}{{#if isSingleVersion}}{{prettyNewVersion}}{{else}}{{#if newValue}}{{{newValue}}}{{else}}{{{newDigestShort}}}{{/if}}{{/if}}{{/if}}{{/if}}",
+    "packageRules": [
+        {
+            "description": "Group GitHub Actions updates",
+            "matchManagers": [
+                "github-actions"
+            ],
+            "groupName": "GitHub Actions",
+            "automerge": true,
+            "automergeType": "pr",
+            "platformAutomerge": true,
+            "labels": [
+                "dependencies",
+                "github-actions",
+                "automerge"
+            ]
+        },
+        {
+            "description": "Group @actions/* packages",
+            "matchPackagePatterns": [
+                "^@actions/"
+            ],
+            "groupName": "GitHub Actions SDK",
+            "automerge": true,
+            "labels": [
+                "dependencies",
+                "npm",
+                "automerge"
+            ]
+        },
+        {
+            "description": "Group TypeScript and type definitions",
+            "matchPackagePatterns": [
+                "^@types/",
+                "^typescript$"
+            ],
+            "groupName": "TypeScript",
+            "automerge": true,
+            "labels": [
+                "dependencies",
+                "npm",
+                "typescript",
+                "automerge"
+            ]
+        },
+        {
+            "description": "Group ESLint packages",
+            "matchPackagePatterns": [
+                "^eslint",
+                "^@typescript-eslint/"
+            ],
+            "groupName": "ESLint",
+            "automerge": true,
+            "labels": [
+                "dependencies",
+                "npm",
+                "linting",
+                "automerge"
+            ]
+        },
+        {
+            "description": "Group Jest packages",
+            "matchPackagePatterns": [
+                "^jest$",
+                "^@types/jest$",
+                "^ts-jest$"
+            ],
+            "groupName": "Jest",
+            "automerge": true,
+            "labels": [
+                "dependencies",
+                "npm",
+                "testing",
+                "automerge"
+            ]
+        },
+        {
+            "description": "Automerge patch and minor updates for dev dependencies",
+            "matchDepTypes": [
+                "devDependencies"
+            ],
+            "matchUpdateTypes": [
+                "patch",
+                "minor"
+            ],
+            "automerge": true,
+            "labels": [
+                "dependencies",
+                "npm",
+                "automerge"
+            ]
+        },
+        {
+            "description": "Require manual approval for major updates",
+            "matchUpdateTypes": [
+                "major"
+            ],
+            "automerge": false,
+            "labels": [
+                "dependencies",
+                "major-update"
+            ],
+            "reviewers": [
+                "@broadsage/maintainers"
+            ]
+        },
+        {
+            "description": "Pin GitHub Actions to commit SHA",
+            "matchManagers": [
+                "github-actions"
+            ],
+            "pinDigests": true
+        },
+        {
+            "description": "Separate security updates",
+            "matchDatasources": [
+                "npm"
+            ],
+            "matchUpdateTypes": [
+                "patch"
+            ],
+            "matchCurrentVersion": "!/^0/",
+            "semanticCommitType": "fix",
+            "semanticCommitScope": "security",
+            "labels": [
+                "dependencies",
+                "security"
+            ]
+        }
+    ],
+    "vulnerabilityAlerts": {
+        "labels": [
+            "security",
+            "dependencies"
+        ],
+        "assignees": [
+            "@broadsage/maintainers"
+        ],
+        "reviewers": [
+            "@broadsage/maintainers"
+        ],
+        "automerge": true,
+        "schedule": [
+            "at any time"
+        ]
+    },
+    "lockFileMaintenance": {
+        "enabled": true,
+        "schedule": [
+            "before 10am on the first day of the month"
+        ],
+        "commitMessageAction": "refresh",
+        "automerge": true,
+        "labels": [
+            "dependencies",
+            "lockfile"
+        ]
+    },
+    "postUpdateOptions": [
+        "npmDedupe"
+    ],
+    "rangeStrategy": "bump",
+    "semanticCommitScope": "deps"
+}

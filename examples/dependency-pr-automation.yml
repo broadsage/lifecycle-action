@@ -1,0 +1,119 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2025 BroadSage
+
+name: Dependency EOL with PR Automation
+
+on:
+  schedule:
+    # Run weekly on Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  eol-check-and-pr:
+    name: Check EOL and Create PR
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Check EOL status
+        id: eol-check
+        uses: broadsage/endoflife-action@v1
+        with:
+          products: 'python,nodejs,postgresql,redis,nginx,ubuntu'
+          eol-threshold-days: 90
+          output-format: 'markdown'
+          output-file: 'eol-report.md'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Read EOL report
+        id: report
+        if: steps.eol-check.outputs.eol-detected == 'true' || steps.eol-check.outputs.approaching-eol == 'true'
+        run: |
+          echo "REPORT<<EOF" >> $GITHUB_OUTPUT
+          cat eol-report.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: Create update branch
+        if: steps.eol-check.outputs.eol-detected == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b automated/eol-updates-$(date +%Y%m%d)
+      
+      - name: Update documentation
+        if: steps.eol-check.outputs.eol-detected == 'true'
+        run: |
+          mkdir -p docs/eol-reports
+          cp eol-report.md docs/eol-reports/report-$(date +%Y%m%d).md
+          git add docs/eol-reports/
+          git commit -m "docs: add EOL report for $(date +%Y-%m-%d)" || true
+      
+      - name: Create Pull Request
+        if: steps.eol-check.outputs.eol-detected == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: automated/eol-updates-$(date +%Y%m%d)
+          title: '🚨 EOL Software Detected - Updates Required'
+          body: |
+            ## End-of-Life Software Detected
+            
+            This PR was automatically created because end-of-life software versions were detected in our dependencies.
+            
+            ### Summary
+            
+            - **EOL Products:** ${{ steps.eol-check.outputs.eol-detected }}
+            - **Approaching EOL:** ${{ steps.eol-check.outputs.approaching-eol }}
+            - **Total Products Checked:** ${{ steps.eol-check.outputs.total-products-checked }}
+            
+            ### Detailed Report
+            
+            ${{ steps.report.outputs.REPORT }}
+            
+            ### Action Items
+            
+            - [ ] Review the EOL report
+            - [ ] Update affected dependencies
+            - [ ] Update Docker base images if applicable
+            - [ ] Update documentation
+            - [ ] Test changes thoroughly
+            - [ ] Update CI/CD configurations
+            
+            ### Resources
+            
+            - [EndOfLife.date](https://endoflife.date)
+            - [Migration Guide](docs/migration-guide.md)
+            
+            ---
+            
+            🤖 This PR was created automatically by the [EndOfLife Action](https://github.com/broadsage/endoflife-action)
+          labels: |
+            dependencies
+            security
+            eol
+            automated
+          assignees: |
+            ${{ github.repository_owner }}
+          reviewers: |
+            ${{ github.repository_owner }}
+      
+      - name: Create issue if PR creation fails
+        if: failure() && steps.eol-check.outputs.eol-detected == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 EOL Software Detected - Manual Review Required',
+              body: `Failed to create automated PR. Please review the EOL report manually.\n\n${{ steps.report.outputs.REPORT }}`,
+              labels: ['dependencies', 'security', 'eol', 'manual-review']
+            });

@@ -1,0 +1,40 @@
+# Example: Extract Version from Helm Values
+
+name: Check Helm Chart Versions
+
+on:
+  schedule:
+    - cron: '0 0 * * 1' # Weekly on Monday
+  workflow_dispatch:
+
+jobs:
+  check-prometheus:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check Prometheus Version
+        uses: broadsage/endoflife-action@v2
+        with:
+          products: 'prometheus'
+          file-path: 'helm/values.yaml'
+          file-key: 'image.tag'
+          file-format: 'yaml'
+          fail-on-eol: true
+          create-issue-on-eol: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          issue-labels: 'dependencies,eol,helm,prometheus'
+
+  check-grafana:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check Grafana Version
+        uses: broadsage/endoflife-action@v2
+        with:
+          products: 'grafana'
+          file-path: 'helm/grafana-values.yaml'
+          file-key: 'grafana.image.tag'
+          fail-on-approaching-eol: true
+          eol-threshold-days: 90

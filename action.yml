@@ -1,0 +1,150 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2025 BroadSage
+
+name: 'EndOfLife Version Tracker'
+description: 'Track software versions and End-of-Life dates using endoflife.date API with advanced features for automated dependency management'
+author: 'BroadSage'
+
+branding:
+  icon: 'clock'
+  color: 'orange'
+
+inputs:
+  products:
+    description: 'Comma-separated list of products to track (e.g., "python,nodejs,ubuntu"). Use "all" to fetch all products.'
+    required: true
+  
+  cycles:
+    description: 'JSON object mapping products to specific cycles to track (e.g., {"python": ["3.11", "3.12"], "nodejs": ["20", "21"]}). Leave empty to track all cycles.'
+    required: false
+    default: '{}'
+  
+  check-eol:
+    description: 'Check if any tracked versions are end-of-life'
+    required: false
+    default: 'true'
+  
+  eol-threshold-days:
+    description: 'Number of days before EOL to trigger warning (default: 90)'
+    required: false
+    default: '90'
+  
+  fail-on-eol:
+    description: 'Fail the action if any version is end-of-life'
+    required: false
+    default: 'false'
+  
+  fail-on-approaching-eol:
+    description: 'Fail the action if any version is approaching EOL within threshold'
+    required: false
+    default: 'false'
+  
+  output-format:
+    description: 'Output format: json, markdown, or summary (GitHub Step Summary)'
+    required: false
+    default: 'summary'
+  
+  output-file:
+    description: 'Path to write output file (optional, in addition to step outputs)'
+    required: false
+    default: ''
+  
+  cache-ttl:
+    description: 'Cache TTL in seconds for API responses (default: 3600 = 1 hour)'
+    required: false
+    default: '3600'
+  
+  github-token:
+    description: 'GitHub token for creating issues/PRs (optional, for advanced features)'
+    required: false
+    default: ''
+  
+  create-issue-on-eol:
+    description: 'Create a GitHub issue when EOL is detected (requires github-token)'
+    required: false
+    default: 'false'
+  
+  issue-labels:
+    description: 'Comma-separated labels for created issues'
+    required: false
+    default: 'dependencies,eol,security'
+  
+  include-latest-version:
+    description: 'Include latest version information in output'
+    required: false
+    default: 'true'
+  
+  include-support-info:
+    description: 'Include support status information in output'
+    required: false
+    default: 'true'
+  
+  custom-api-url:
+    description: 'Custom API URL (for testing or self-hosted instances)'
+    required: false
+    default: 'https://endoflife.date'
+  
+  file-path:
+    description: 'Path to file containing version information (e.g., helm/values.yaml, package.json)'
+    required: false
+    default: ''
+  
+  file-key:
+    description: 'Nested key path for YAML/JSON extraction (e.g., "image.tag", "dependencies.python")'
+    required: false
+    default: ''
+  
+  file-format:
+    description: 'File format for extraction: yaml, json, or text'
+    required: false
+    default: 'yaml'
+  
+  version-regex:
+    description: 'Regular expression to extract version from any file (e.g., "v([0-9]+\.[0-9]+\.[0-9]+)")'
+    required: false
+    default: ''
+  
+  version:
+    description: 'Manually specify version (alternative to file extraction). If provided, skips file extraction.'
+    required: false
+    default: ''
+  
+  semantic-version-fallback:
+    description: 'Enable semantic version fallback matching (1.2.3 → 1.2 → 1)'
+    required: false
+    default: 'true'
+
+outputs:
+  eol-detected:
+    description: 'Boolean indicating if any EOL versions were detected'
+  
+  version:
+    description: 'Extracted version from file (if file-path was provided)'
+  
+  approaching-eol:
+    description: 'Boolean indicating if any versions are approaching EOL'
+  
+  results:
+    description: 'JSON string containing all version information'
+  
+  eol-products:
+    description: 'JSON array of products that are end-of-life'
+  
+  approaching-eol-products:
+    description: 'JSON array of products approaching end-of-life'
+  
+  latest-versions:
+    description: 'JSON object mapping products to their latest versions'
+  
+  summary:
+    description: 'Human-readable summary of findings'
+  
+  total-products-checked:
+    description: 'Total number of products checked'
+  
+  total-cycles-checked:
+    description: 'Total number of cycles checked'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

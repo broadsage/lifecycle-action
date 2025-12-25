@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2025 BroadSage
+
+name: Basic EOL Check
+
+on:
+  schedule:
+    # Run every Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  eol-check:
+    name: Check End-of-Life Status
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Check EOL status
+        uses: broadsage/endoflife-action@v1
+        with:
+          # Specify products to track
+          products: 'python,nodejs,ubuntu,postgresql,redis'
+          
+          # Warn 90 days before EOL
+          eol-threshold-days: 90
+          
+          # Output to GitHub Step Summary
+          output-format: 'summary'
+          
+          # Don't fail the workflow
+          fail-on-eol: false
+          fail-on-approaching-eol: false

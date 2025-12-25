@@ -1,0 +1,49 @@
+# Example: Manual Version Input
+
+name: Check Specific Versions
+
+on:
+  workflow_dispatch:
+    inputs:
+      python_version:
+        description: 'Python version to check'
+        required: true
+        default: '3.11.7'
+      nodejs_version:
+        description: 'Node.js version to check'
+        required: true
+        default: '20.10.0'
+
+jobs:
+  check-python:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Python Version
+        uses: broadsage/endoflife-action@v2
+        with:
+          products: 'python'
+          version: ${{ github.event.inputs.python_version }}
+          semantic-version-fallback: true
+          fail-on-eol: true
+
+  check-nodejs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Node.js Version
+        uses: broadsage/endoflife-action@v2
+        with:
+          products: 'nodejs'
+          version: ${{ github.event.inputs.nodejs_version }}
+          semantic-version-fallback: true
+          fail-on-approaching-eol: true
+          eol-threshold-days: 90
+
+  check-ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Ubuntu 22.04
+        uses: broadsage/endoflife-action@v2
+        with:
+          products: 'ubuntu'
+          version: '22.04'
+          output-format: 'summary'
