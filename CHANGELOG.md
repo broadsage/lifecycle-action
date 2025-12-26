@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/broadsage/endoflife-action/compare/v1.0.0...v1.0.1) (2025-12-26)
+
+
+### Bug Fixes
+
+* trigger workflow only on tag creation ([d362c1f](https://github.com/broadsage/endoflife-action/commit/d362c1f41d71fe43a914fa1cc223793440d9abd0))
+
 ## 1.0.0 (2025-12-26)
 
 
