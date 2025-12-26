@@ -1,14 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
-# SPDX-FileCopyrightText: 2025 BroadSage
+# SPDX-FileCopyrightText: 2025 Broadsage
 
 name: CI
 
 on:
   push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main, develop]
-  workflow_dispatch:
+    tags:
+      - 'v*.*.*'
 
 jobs:
   test:
