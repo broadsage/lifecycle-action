@@ -126,8 +126,8 @@ jobs:
           path: eol-report.md
           retention-days: 7
 
-  security:
-    name: Security Scan
+  dependency-security:
+    name: Dependency Security Scan
     runs-on: ubuntu-latest
 
     steps:
@@ -143,6 +143,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run npm audit
-        run: npm audit --audit-level=moderate
+      - name: Run npm audit (informational)
+        run: npm audit --audit-level=low
         continue-on-error: true
+
+      - name: Run npm audit (enforce high/critical)
+        run: npm audit --audit-level=high
+        continue-on-error: false
