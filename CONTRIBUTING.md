@@ -157,13 +157,16 @@ Integration tests should test the action end-to-end with real API calls (using n
 
 ## Release Process
 
-Releases are automated via GitHub Actions:
+This project uses [Release Please](https://github.com/googleapis/release-please) to automate releases.
 
-1. Update version in `package.json`
-2. Update CHANGELOG.md
-3. Create a git tag: `git tag v1.2.3`
-4. Push tag: `git push origin v1.2.3`
-5. GitHub Actions will create the release
+1. When you merge a pull request to `main`, Release Please will create or update a Release PR.
+2. The Release PR contains the version bump (following [Conventional Commits](https://www.conventionalcommits.org/)) and updated `CHANGELOG.md`.
+3. When the Release PR is merged:
+   - A GitHub Release is created.
+   - A git tag is created (e.g., `v1.2.3`).
+   - The major version tag (e.g., `v1`) is updated.
+   - Build artifacts are automatically bundled and pushed to the tag.
+   - The action is automatically updated in the [GitHub Marketplace](https://github.com/marketplace).
 
 ## Questions?
 

@@ -18,40 +18,28 @@ jobs:
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
-      version: ${{ steps.release.outputs.major }}.${{ steps.release.outputs.minor }}.${{ steps.release.outputs.patch }}
+      major: ${{ steps.release.outputs.major }}
+      version: ${{ steps.release.outputs.version }}
     
     steps:
-      - name: Harden the runner (Audit all outbound calls)
+      - name: Harden the runner
         uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
         with:
           egress-policy: audit
 
       - name: Run release-please
         id: release
-        uses: google-github-actions/release-please-action@e4dc86ba9405554aeba3c6bb2d169500e7d3b4ee # v4.1.1
+        uses: googleapis/release-please-action@v4
         with:
-          release-type: node
-          package-name: endoflife-action
-          changelog-types: |
-            [
-              {"type":"feat","section":"Features","hidden":false},
-              {"type":"fix","section":"Bug Fixes","hidden":false},
-              {"type":"perf","section":"Performance Improvements","hidden":false},
-              {"type":"refactor","section":"Code Refactoring","hidden":false},
-              {"type":"docs","section":"Documentation","hidden":false},
-              {"type":"chore","section":"Miscellaneous","hidden":false},
-              {"type":"test","section":"Tests","hidden":false},
-              {"type":"build","section":"Build System","hidden":false},
-              {"type":"ci","section":"Continuous Integration","hidden":false}
-            ]
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-  build-and-publish:
+  publish-marketplace:
     needs: release-please
     if: ${{ needs.release-please.outputs.release_created }}
     runs-on: ubuntu-latest
     
     steps:
-      - name: Harden the runner (Audit all outbound calls)
+      - name: Harden the runner
         uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
         with:
           egress-policy: audit
@@ -60,11 +48,12 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: '20.x'
+          node-version: '24.x'
           cache: 'npm'
 
       - name: Install dependencies
@@ -73,38 +62,29 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Run tests
-        run: npm test
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: dist
-          path: dist/
+      - name: Commit build artifacts to tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # Force add dist directory
+          git add -f dist/
+          
+          # Only commit if there are changes
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: build artifacts for ${{ needs.release-please.outputs.tag_name }}"
+            
+            # Delete the local tag and recreate it at the new commit
+            git tag -d ${{ needs.release-please.outputs.tag_name }}
+            git tag ${{ needs.release-please.outputs.tag_name }}
+            
+            # Force push the updated tag
+            git push origin ${{ needs.release-please.outputs.tag_name }} --force
+          fi
 
       - name: Update major version tag
         run: |
-          VERSION=${{ needs.release-please.outputs.version }}
-          MAJOR_VERSION=$(echo $VERSION | cut -d. -f1)
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git tag -fa v${MAJOR_VERSION} -m "Update v${MAJOR_VERSION} tag to $VERSION"
-          git push origin v${MAJOR_VERSION} --force
+          MAJOR="v${{ needs.release-please.outputs.major }}"
+          git tag -f ${MAJOR}
+          git push origin ${MAJOR} --force
 
-      - name: Comment on release PR
-        if: ${{ needs.release-please.outputs.release_created }}
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
-        with:
-          script: |
-            const version = '${{ needs.release-please.outputs.version }}';
-            const tagName = '${{ needs.release-please.outputs.tag_name }}';
-            
-            github.rest.repos.createRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag_name: tagName,
-              name: `Release ${version}`,
-              body: `🎉 Release ${version} has been published!\n\n## Installation\n\n\`\`\`yaml\n- uses: broadsage/endoflife-action@${tagName}\n  with:\n    products: 'python,nodejs,ubuntu'\n\`\`\`\n\nSee the [CHANGELOG](https://github.com/broadsage/endoflife-action/blob/${tagName}/CHANGELOG.md) for details.`,
-              draft: false,
-              prerelease: false
-            });
