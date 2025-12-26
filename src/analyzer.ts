@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// SPDX-FileCopyrightText: 2025 BroadSage
+// SPDX-FileCopyrightText: 2025 Broadsage
 
 import { differenceInDays, parseISO, isValid } from 'date-fns';
 import * as core from '@actions/core';
@@ -20,7 +20,7 @@ export class EolAnalyzer {
   constructor(
     private client: EndOfLifeClient,
     private eolThresholdDays: number
-  ) {}
+  ) { }
 
   /**
    * Parse EOL date from various formats

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// SPDX-FileCopyrightText: 2025 BroadSage
+// SPDX-FileCopyrightText: 2025 Broadsage
 
 import * as core from '@actions/core';
 import { EndOfLifeClient } from './client';

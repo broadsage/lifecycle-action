@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// SPDX-FileCopyrightText: 2025 BroadSage
+// SPDX-FileCopyrightText: 2025 Broadsage
 
 import { VersionExtractor, FileFormat } from '../src/version-extractor';
 import * as fs from 'fs';
@@ -71,7 +71,7 @@ image:
             const filePath = path.join(tempDir, 'test.yaml');
             fs.writeFileSync(filePath, yamlContent);
 
-            expect(() => 
+            expect(() =>
                 extractor.extractFromFile(filePath, FileFormat.YAML, 'image.tag')
             ).toThrow('not a string or number');
         });
@@ -80,7 +80,7 @@ image:
             const filePath = path.join(tempDir, 'test.yaml');
             fs.writeFileSync(filePath, 'test: value');
 
-            expect(() => 
+            expect(() =>
                 extractor.extractFromFile(filePath, FileFormat.YAML)
             ).toThrow('file-key is required for YAML extraction');
         });
@@ -127,7 +127,7 @@ image:
             const filePath = path.join(tempDir, 'test.json');
             fs.writeFileSync(filePath, JSON.stringify(jsonContent));
 
-            expect(() => 
+            expect(() =>
                 extractor.extractFromFile(filePath, FileFormat.JSON, 'version')
             ).toThrow('not a string or number');
         });
@@ -189,7 +189,7 @@ COPY . .
             const filePath = path.join(tempDir, 'test.txt');
             fs.writeFileSync(filePath, content);
 
-            expect(() => 
+            expect(() =>
                 extractor.extractFromFile(
                     filePath,
                     FileFormat.TEXT,
@@ -282,7 +282,7 @@ image:
 
     describe('Error handling', () => {
         it('should throw error if file does not exist', () => {
-            expect(() => 
+            expect(() =>
                 extractor.extractFromFile(
                     '/nonexistent/file.yaml',
                     FileFormat.YAML,
@@ -295,7 +295,7 @@ image:
             const filePath = path.join(tempDir, 'test.txt');
             fs.writeFileSync(filePath, 'content');
 
-            expect(() => 
+            expect(() =>
                 extractor.extractFromFile(filePath, 'xml' as FileFormat, 'key')
             ).toThrow('Unsupported file format');
         });
@@ -304,7 +304,7 @@ image:
             const filePath = path.join(tempDir, 'invalid.yaml');
             fs.writeFileSync(filePath, '{ invalid yaml content [');
 
-            expect(() => 
+            expect(() =>
                 extractor.extractFromFile(filePath, FileFormat.YAML, 'key')
             ).toThrow();
         });
@@ -313,7 +313,7 @@ image:
             const filePath = path.join(tempDir, 'invalid.json');
             fs.writeFileSync(filePath, '{ invalid json }');
 
-            expect(() => 
+            expect(() =>
                 extractor.extractFromFile(filePath, FileFormat.JSON, 'key')
             ).toThrow();
         });

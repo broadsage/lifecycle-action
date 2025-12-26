@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
-# SPDX-FileCopyrightText: 2025 BroadSage
+# SPDX-FileCopyrightText: 2025 Broadsage
 
 name: 'EndOfLife Version Tracker'
-description: 'Track software versions and End-of-Life dates using endoflife.date API with advanced features for automated dependency management'
-author: 'BroadSage'
+description: 'Identifies the End-of-life (EoL) dates for products, using the endoflife.date API'
+author: 'Broadsage'
 
 branding:
   icon: 'clock'

@@ -511,4 +511,5 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ---
 
-**Made with ❤️ by [BroadSage](https://broadsage.com)**
+**Made with ❤️ by [Broadsage](https://broadsage.com)**
+
