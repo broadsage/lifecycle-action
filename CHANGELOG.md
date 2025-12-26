@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.0.1](https://github.com/broadsage/endoflife-action/compare/endoflife-action-v2.0.0...endoflife-action-v2.0.1) (2025-12-26)
+
+
+### Miscellaneous
+
+* commit dist/ artifacts following GitHub Actions best practices ([9cffec7](https://github.com/broadsage/endoflife-action/commit/9cffec7d728d4c8358e39fe23a06b8eee72ec278))
+* optimize dist/ to contain only essential runtime files ([407e1a2](https://github.com/broadsage/endoflife-action/commit/407e1a2aeef60d40904387a7dacf06b8addf27a5))
+
 ## [2.0.0](https://github.com/broadsage/endoflife-action/compare/endoflife-action-v1.0.1...endoflife-action-v2.0.0) (2025-12-26)
 
 
