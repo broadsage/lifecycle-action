@@ -4,7 +4,8 @@
   "description": "GitHub Action to track software versions and End-of-Life dates using endoflife.date API",
   "main": "dist/index.js",
   "scripts": {
-    "build": "ncc build src/index.ts -o dist --source-map --license licenses.txt",
+    "build": "ncc build src/index.ts -o dist --source-map --license licenses.txt && npm run build:cleanup",
+    "build:cleanup": "find dist -type f \\( -name '*.d.ts' -o -name '*.d.ts.map' \\) -delete && find dist -type d -empty -delete && echo 'Cleaned up TypeScript declaration files from dist/'",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
     "test:integration": "jest --testPathPattern=integration",
