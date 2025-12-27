@@ -120,33 +120,95 @@ export class EolAnalyzer {
   }
 
   /**
+   * Filter cycles by release date
+   */
+  filterByReleaseDate(
+    cycles: Cycle[],
+    minDate?: Date,
+    maxDate?: Date
+  ): Cycle[] {
+    if (!minDate && !maxDate) return cycles;
+
+    return cycles.filter((cycle) => {
+      if (!cycle.releaseDate) return false;
+
+      try {
+        const releaseDate = parseISO(cycle.releaseDate);
+        if (!isValid(releaseDate)) return false;
+
+        if (minDate && releaseDate < minDate) return false;
+        if (maxDate && releaseDate > maxDate) return false;
+
+        return true;
+      } catch {
+        return false;
+      }
+    });
+  }
+
+  /**
+   * Sort and limit versions
+   */
+  limitVersions(
+    cycles: Cycle[],
+    maxVersions: number | null,
+    sortOrder: 'newest-first' | 'oldest-first'
+  ): Cycle[] {
+    if (!maxVersions) return cycles;
+
+    // Sort cycles by release date
+    const sorted = [...cycles].sort((a, b) => {
+      const dateA = a.releaseDate ? parseISO(a.releaseDate) : new Date(0);
+      const dateB = b.releaseDate ? parseISO(b.releaseDate) : new Date(0);
+
+      if (sortOrder === 'newest-first') {
+        return dateB.getTime() - dateA.getTime();
+      } else {
+        return dateA.getTime() - dateB.getTime();
+      }
+    });
+
+    return sorted.slice(0, maxVersions);
+  }
+
+  /**
    * Analyze all cycles for a product
    */
   async analyzeProduct(
     product: string,
-    specificCycles?: string[]
+    specificCycles?: string[],
+    minReleaseDate?: Date,
+    maxReleaseDate?: Date,
+    maxVersions?: number | null,
+    versionSortOrder: 'newest-first' | 'oldest-first' = 'newest-first'
   ): Promise<ProductVersionInfo[]> {
     core.info(`Analyzing product: ${product}`);
 
     try {
-      const cycles = await this.client.getProductCycles(product);
+      let cycles = await this.client.getProductCycles(product);
 
       if (specificCycles && specificCycles.length > 0) {
         // Filter to specific cycles
-        const filteredCycles = cycles.filter((cycle) =>
+        cycles = cycles.filter((cycle) =>
           specificCycles.includes(String(cycle.cycle))
         );
 
-        if (filteredCycles.length === 0) {
+        if (cycles.length === 0) {
           core.warning(
             `No matching cycles found for ${product}. Requested: ${specificCycles.join(', ')}`
           );
         }
-
-        return filteredCycles.map((cycle) =>
-          this.analyzeProductCycle(product, cycle)
-        );
       }
+
+      // Apply date filtering
+      cycles = this.filterByReleaseDate(cycles, minReleaseDate, maxReleaseDate);
+
+      // Apply version limiting
+      cycles = this.limitVersions(
+        cycles,
+        maxVersions ?? null,
+        versionSortOrder
+      );
 
       return cycles.map((cycle) => this.analyzeProductCycle(product, cycle));
     } catch (error) {
@@ -164,7 +226,11 @@ export class EolAnalyzer {
     products: string[],
     cyclesMap?: ProductCycles,
     versionMap?: Map<string, string>,
-    semanticFallback = true
+    semanticFallback = true,
+    minReleaseDate?: Date,
+    maxReleaseDate?: Date,
+    maxVersions?: number | null,
+    versionSortOrder: 'newest-first' | 'oldest-first' = 'newest-first'
   ): Promise<ActionResults> {
     const allResults: ProductVersionInfo[] = [];
 
@@ -194,7 +260,14 @@ export class EolAnalyzer {
         } else {
           // Multi-cycle mode - existing logic
           const specificCycles = cyclesMap?.[product];
-          const results = await this.analyzeProduct(product, specificCycles);
+          const results = await this.analyzeProduct(
+            product,
+            specificCycles,
+            minReleaseDate,
+            maxReleaseDate,
+            maxVersions,
+            versionSortOrder
+          );
           allResults.push(...results);
         }
       } catch (error) {

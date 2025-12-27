@@ -42,6 +42,21 @@ export function getInputs(): ActionInputs {
     'semantic-version-fallback'
   );
 
+  // Matrix output inputs
+  const outputMatrix = core.getBooleanInput('output-matrix');
+  const excludeEolFromMatrix = core.getBooleanInput('exclude-eol-from-matrix');
+  const excludeApproachingEolFromMatrix = core.getBooleanInput(
+    'exclude-approaching-eol-from-matrix'
+  );
+
+  // Filtering inputs
+  const minReleaseDate = core.getInput('min-release-date') || '';
+  const maxReleaseDate = core.getInput('max-release-date') || '';
+  const maxVersionsInput = core.getInput('max-versions') || '';
+  const maxVersions = maxVersionsInput ? parseInt(maxVersionsInput, 10) : null;
+  const versionSortOrder = (core.getInput('version-sort-order') ||
+    'newest-first') as ActionInputs['versionSortOrder'];
+
   return {
     products,
     cycles,
@@ -64,6 +79,13 @@ export function getInputs(): ActionInputs {
     versionRegex,
     version,
     semanticVersionFallback,
+    outputMatrix,
+    excludeEolFromMatrix,
+    excludeApproachingEolFromMatrix,
+    minReleaseDate,
+    maxReleaseDate,
+    maxVersions,
+    versionSortOrder,
   };
 }
 
@@ -155,4 +177,92 @@ export function validateInputs(inputs: ActionInputs): void {
       );
     }
   }
+
+  // Validate date filtering inputs
+  if (inputs.minReleaseDate) {
+    validateDateFilter(inputs.minReleaseDate, 'min-release-date');
+  }
+  if (inputs.maxReleaseDate) {
+    validateDateFilter(inputs.maxReleaseDate, 'max-release-date');
+  }
+
+  // Validate max-versions
+  if (
+    inputs.maxVersions !== null &&
+    inputs.maxVersions !== undefined &&
+    inputs.maxVersions <= 0
+  ) {
+    throw new Error('max-versions must be a positive integer');
+  }
+
+  // Validate version-sort-order
+  if (!['newest-first', 'oldest-first'].includes(inputs.versionSortOrder)) {
+    throw new Error('version-sort-order must be newest-first or oldest-first');
+  }
+}
+
+/**
+ * Validate date filter format
+ */
+export function validateDateFilter(dateStr: string, fieldName: string): void {
+  // Remove operators
+  const cleanDate = dateStr.replace(/^(>=|<=)/, '');
+
+  // Check if it's a year (YYYY)
+  if (/^\d{4}$/.test(cleanDate)) {
+    const year = parseInt(cleanDate, 10);
+    if (year < 1900 || year > 2100) {
+      throw new Error(`${fieldName}: Year must be between 1900 and 2100`);
+    }
+    return;
+  }
+
+  // Check if it's a full date (YYYY-MM-DD)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
+    const date = new Date(cleanDate);
+    if (isNaN(date.getTime())) {
+      throw new Error(`${fieldName}: Invalid date format. Use YYYY-MM-DD`);
+    }
+    return;
+  }
+
+  throw new Error(
+    `${fieldName}: Invalid date format. Use YYYY, YYYY-MM-DD, >=YYYY, or <=YYYY`
+  );
+}
+
+/**
+ * Parse date filter with operators
+ */
+export function parseDateFilter(dateStr: string): {
+  operator: '>=' | '<=' | '=';
+  date: Date;
+} {
+  let operator: '>=' | '<=' | '=' = '=';
+  let cleanDate = dateStr;
+
+  if (dateStr.startsWith('>=')) {
+    operator = '>=';
+    cleanDate = dateStr.substring(2);
+  } else if (dateStr.startsWith('<=')) {
+    operator = '<=';
+    cleanDate = dateStr.substring(2);
+  }
+
+  // If it's just a year, convert to full date
+  if (/^\d{4}$/.test(cleanDate)) {
+    // For >= use start of year, for <= use end of year
+    if (operator === '>=') {
+      cleanDate = `${cleanDate}-01-01`;
+    } else if (operator === '<=') {
+      cleanDate = `${cleanDate}-12-31`;
+    } else {
+      cleanDate = `${cleanDate}-01-01`;
+    }
+  }
+
+  return {
+    operator,
+    date: new Date(cleanDate),
+  };
 }

@@ -1,0 +1,111 @@
+# Matrix Generation Example
+# Demonstrates how to use EndOfLife Action to generate build matrices
+
+name: Matrix Generation Example
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 1' # Weekly
+
+jobs:
+  # Job 1: Generate matrix of supported Python versions
+  get-python-versions:
+    name: Get Supported Python Versions
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.eol.outputs.matrix }}
+      matrix-include: ${{ steps.eol.outputs.matrix-include }}
+    steps:
+      - name: Check Python EOL Status
+        id: eol
+        uses: broadsage/endoflife-action@v3
+        with:
+          products: 'python'
+          output-matrix: true
+          exclude-eol-from-matrix: true
+          exclude-approaching-eol-from-matrix: false
+          min-release-date: '>=2020' # Only Python versions from 2020 onwards
+          max-versions: 5 # Limit to 5 most recent versions
+          version-sort-order: 'newest-first'
+  
+  # Job 2: Test against all supported Python versions
+  test-python:
+    name: Test on Python ${{ matrix.version }}
+    needs: get-python-versions
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.get-python-versions.outputs.matrix) }}
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.version }}
+      
+      - name: Run tests
+        run: |
+          echo "Testing on Python ${{ matrix.version }}"
+          python --version
+          # Add your test commands here
+  
+  # Job 3: Test with detailed matrix (includes metadata)
+  test-python-detailed:
+    name: Test Python ${{ matrix.version }} (LTS=${{ matrix.isLts }})
+    needs: get-python-versions
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.get-python-versions.outputs.matrix-include) }}
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.version }}
+      
+      - name: Display Version Info
+        run: |
+          echo "Testing Python ${{ matrix.version }}"
+          echo "Is LTS: ${{ matrix.isLts }}"
+          echo "EOL Date: ${{ matrix.eolDate }}"
+          echo "Status: ${{ matrix.status }}"
+          python --version
+
+  # Job 4: Generate matrix for multiple products
+  get-nodejs-versions:
+    name: Get Supported Node.js Versions
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.eol.outputs.matrix }}
+    steps:
+      - name: Check Node.js EOL Status
+        id: eol
+        uses: broadsage/endoflife-action@v3
+        with:
+          products: 'nodejs'
+          output-matrix: true
+          exclude-eol-from-matrix: true
+          max-versions: 3 # Latest 3 LTS versions
+
+  test-nodejs:
+    name: Test on Node.js ${{ matrix.version }}
+    needs: get-nodejs-versions
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.get-nodejs-versions.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js ${{ matrix.version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.version }}
+      
+      - name: Run tests
+        run: |
+          echo "Testing on Node.js ${{ matrix.version }}"
+          node --version

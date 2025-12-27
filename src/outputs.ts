@@ -113,6 +113,70 @@ export async function writeToFile(
 }
 
 /**
+ * Generate simple matrix output for GitHub Actions
+ */
+export function generateMatrix(
+  results: ActionResults,
+  excludeEol = true,
+  excludeApproachingEol = false
+): { versions: string[] } {
+  let products = results.products;
+
+  // Filter based on EOL status
+  if (excludeEol) {
+    products = products.filter((p) => p.status !== EolStatus.END_OF_LIFE);
+  }
+  if (excludeApproachingEol) {
+    products = products.filter((p) => p.status !== EolStatus.APPROACHING_EOL);
+  }
+
+  // Extract unique cycles/versions
+  const versions = products.map((p) => p.cycle);
+
+  return { versions };
+}
+
+/**
+ * Generate detailed matrix output with metadata
+ */
+export function generateMatrixInclude(
+  results: ActionResults,
+  excludeEol = true,
+  excludeApproachingEol = false
+): {
+  include: Array<{
+    version: string;
+    cycle: string;
+    isLts: boolean;
+    eolDate: string | null;
+    status: string;
+    releaseDate: string | null;
+  }>;
+} {
+  let products = results.products;
+
+  // Filter based on EOL status
+  if (excludeEol) {
+    products = products.filter((p) => p.status !== EolStatus.END_OF_LIFE);
+  }
+  if (excludeApproachingEol) {
+    products = products.filter((p) => p.status !== EolStatus.APPROACHING_EOL);
+  }
+
+  // Map to detailed matrix items
+  const include = products.map((p) => ({
+    version: p.cycle,
+    cycle: p.cycle,
+    isLts: p.isLts,
+    eolDate: p.eolDate,
+    status: p.status,
+    releaseDate: p.releaseDate,
+  }));
+
+  return { include };
+}
+
+/**
  * Set action outputs
  */
 export function setOutputs(results: ActionResults): void {
@@ -128,6 +192,14 @@ export function setOutputs(results: ActionResults): void {
   core.setOutput('summary', results.summary);
   core.setOutput('total-products-checked', results.totalProductsChecked);
   core.setOutput('total-cycles-checked', results.totalCyclesChecked);
+
+  // Matrix outputs (if generated)
+  if (results.matrix) {
+    core.setOutput('matrix', JSON.stringify(results.matrix));
+  }
+  if (results.matrixInclude) {
+    core.setOutput('matrix-include', JSON.stringify(results.matrixInclude));
+  }
 }
 
 /**

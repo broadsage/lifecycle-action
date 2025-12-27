@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: 2025 Broadsage
 
-name: 'EndOfLife Version Tracker'
+name: 'End-of-Life GitHub Action'
 description: 'Identifies the End-of-life (EoL) dates for products, using the endoflife.date API'
 author: 'Broadsage'
 
@@ -113,6 +113,41 @@ inputs:
     description: 'Enable semantic version fallback matching (1.2.3 → 1.2 → 1)'
     required: false
     default: 'true'
+  
+  output-matrix:
+    description: 'Enable matrix output generation for GitHub Actions matrix strategies'
+    required: false
+    default: 'false'
+  
+  exclude-eol-from-matrix:
+    description: 'Exclude end-of-life versions from matrix output'
+    required: false
+    default: 'true'
+  
+  exclude-approaching-eol-from-matrix:
+    description: 'Exclude versions approaching EOL from matrix output'
+    required: false
+    default: 'false'
+  
+  min-release-date:
+    description: 'Minimum release date filter (YYYY-MM-DD, YYYY, or >=YYYY)'
+    required: false
+    default: ''
+  
+  max-release-date:
+    description: 'Maximum release date filter (YYYY-MM-DD, YYYY, or <=YYYY)'
+    required: false
+    default: ''
+  
+  max-versions:
+    description: 'Maximum number of versions to check per product'
+    required: false
+    default: ''
+  
+  version-sort-order:
+    description: 'Sort order for versions: newest-first or oldest-first'
+    required: false
+    default: 'newest-first'
 
 outputs:
   eol-detected:
@@ -144,6 +179,12 @@ outputs:
   
   total-cycles-checked:
     description: 'Total number of cycles checked'
+  
+  matrix:
+    description: 'JSON matrix for GitHub Actions (format: { "versions": [...] })'
+  
+  matrix-include:
+    description: 'Detailed JSON matrix with metadata (format: { "include": [...] })'
 
 runs:
   using: 'node24'

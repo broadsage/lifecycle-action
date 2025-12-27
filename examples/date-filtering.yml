@@ -1,0 +1,100 @@
+# Date Filtering Example
+# Demonstrates how to filter versions by release date
+
+name: Date Filtering Example
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 0' # Weekly on Sunday
+
+jobs:
+  # Check only recent Python versions (2023 onwards)
+  check-recent-python:
+    name: Check Recent Python Versions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Python Versions from 2023
+        uses: broadsage/endoflife-action@v3
+        with:
+          products: 'python'
+          min-release-date: '>=2023'
+          create-issue-on-eol: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  # Check versions within a specific date range
+  check-nodejs-2022-2024:
+    name: Check Node.js Versions 2022-2024
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Node.js Versions Released Between 2022-2024
+        uses: broadsage/endoflife-action@v3
+        with:
+          products: 'nodejs'
+          min-release-date: '>=2022-01-01'
+          max-release-date: '<=2024-12-31'
+          output-format: 'markdown'
+          output-file: 'nodejs-eol-report.md'
+      
+      - name: Upload Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: nodejs-eol-report
+          path: nodejs-eol-report.md
+
+  # Combine date filtering with version limiting
+  check-recent-limited:
+    name: Check Recent Limited Versions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Latest 5 Versions from 2022
+        uses: broadsage/endoflife-action@v3
+        with:
+          products: 'ubuntu'
+          min-release-date: '>=2022'
+          max-versions: 5
+          version-sort-order: 'newest-first'
+          fail-on-eol: true
+
+  # Generate matrix with date filtering
+  get-recent-versions:
+    name: Get Recent Versions for Testing
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.eol.outputs.matrix }}
+    steps:
+      - name: Get Recent PostgreSQL Versions
+        id: eol
+        uses: broadsage/endoflife-action@v3
+        with:
+          products: 'postgresql'
+          min-release-date: '>=2021'
+          output-matrix: true
+          exclude-eol-from-matrix: true
+          max-versions: 4
+
+  test-postgresql:
+    name: Test PostgreSQL ${{ matrix.version }}
+    needs: get-recent-versions
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.get-recent-versions.outputs.matrix) }}
+    services:
+      postgres:
+        image: postgres:${{ matrix.version }}
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Test Database Connection
+        env:
+          PGPASSWORD: postgres
+        run: |
+          echo "Testing PostgreSQL ${{ matrix.version }}"
+          psql -h localhost -U postgres -c "SELECT version();"

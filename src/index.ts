@@ -12,6 +12,7 @@ import {
   parseProducts,
   parseCycles,
   validateInputs,
+  parseDateFilter,
 } from './inputs';
 import {
   setOutputs,
@@ -19,6 +20,8 @@ import {
   formatAsJson,
   formatAsMarkdown,
   writeToFile,
+  generateMatrix,
+  generateMatrixInclude,
 } from './outputs';
 
 /**
@@ -92,16 +95,62 @@ async function run(): Promise<void> {
 
     core.info(`Analyzing ${products.length} product(s)...`);
 
+    // Parse date filters
+    let minReleaseDate: Date | undefined;
+    let maxReleaseDate: Date | undefined;
+
+    if (inputs.minReleaseDate) {
+      const parsed = parseDateFilter(inputs.minReleaseDate);
+      minReleaseDate = parsed.date;
+      core.info(
+        `Filtering versions released on or after: ${parsed.date.toISOString().split('T')[0]}`
+      );
+    }
+
+    if (inputs.maxReleaseDate) {
+      const parsed = parseDateFilter(inputs.maxReleaseDate);
+      maxReleaseDate = parsed.date;
+      core.info(
+        `Filtering versions released on or before: ${parsed.date.toISOString().split('T')[0]}`
+      );
+    }
+
+    if (inputs.maxVersions) {
+      core.info(
+        `Limiting to maximum ${inputs.maxVersions} versions per product (${inputs.versionSortOrder})`
+      );
+    }
+
     // Initialize analyzer
     const analyzer = new EolAnalyzer(client, inputs.eolThresholdDays);
 
-    // Analyze products
+    // Analyze products with filtering
     const results = await analyzer.analyzeProducts(
       products,
       cyclesMap,
       versionMap,
-      inputs.semanticVersionFallback
+      inputs.semanticVersionFallback,
+      minReleaseDate,
+      maxReleaseDate,
+      inputs.maxVersions,
+      inputs.versionSortOrder
     );
+
+    // Generate matrix outputs if requested
+    if (inputs.outputMatrix) {
+      core.info('Generating matrix outputs...');
+      results.matrix = generateMatrix(
+        results,
+        inputs.excludeEolFromMatrix,
+        inputs.excludeApproachingEolFromMatrix
+      );
+      results.matrixInclude = generateMatrixInclude(
+        results,
+        inputs.excludeEolFromMatrix,
+        inputs.excludeApproachingEolFromMatrix
+      );
+      core.info(`Matrix contains ${results.matrix.versions.length} version(s)`);
+    }
 
     // Log summary
     core.info('\n' + results.summary);

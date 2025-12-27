@@ -36,6 +36,26 @@ export const ProductCyclesSchema = z.record(z.string(), z.array(z.string()));
 export type ProductCycles = z.infer<typeof ProductCyclesSchema>;
 
 /**
+ * Matrix output formats
+ */
+export interface MatrixOutput {
+  versions: string[];
+}
+
+export interface MatrixIncludeItem {
+  version: string;
+  cycle: string;
+  isLts: boolean;
+  eolDate: string | null;
+  status: string;
+  releaseDate: string | null;
+}
+
+export interface MatrixIncludeOutput {
+  include: MatrixIncludeItem[];
+}
+
+/**
  * Schema for action inputs
  */
 export const ActionInputsSchema = z.object({
@@ -61,6 +81,15 @@ export const ActionInputsSchema = z.object({
   versionRegex: z.string(),
   version: z.string(),
   semanticVersionFallback: z.boolean(),
+  // Matrix output inputs
+  outputMatrix: z.boolean(),
+  excludeEolFromMatrix: z.boolean(),
+  excludeApproachingEolFromMatrix: z.boolean(),
+  // Filtering inputs
+  minReleaseDate: z.string(),
+  maxReleaseDate: z.string(),
+  maxVersions: z.number().int().positive().optional().nullable(),
+  versionSortOrder: z.enum(['newest-first', 'oldest-first']),
 });
 
 export type ActionInputs = z.infer<typeof ActionInputsSchema>;
@@ -105,6 +134,9 @@ export interface ActionResults {
   approachingEolProducts: ProductVersionInfo[];
   latestVersions: Record<string, string>;
   summary: string;
+  // Matrix outputs
+  matrix?: MatrixOutput;
+  matrixInclude?: MatrixIncludeOutput;
 }
 
 /**

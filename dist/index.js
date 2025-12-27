@@ -55258,20 +55258,66 @@ class EolAnalyzer {
         };
     }
     /**
+     * Filter cycles by release date
+     */
+    filterByReleaseDate(cycles, minDate, maxDate) {
+        if (!minDate && !maxDate)
+            return cycles;
+        return cycles.filter((cycle) => {
+            if (!cycle.releaseDate)
+                return false;
+            try {
+                const releaseDate = (0, date_fns_1.parseISO)(cycle.releaseDate);
+                if (!(0, date_fns_1.isValid)(releaseDate))
+                    return false;
+                if (minDate && releaseDate < minDate)
+                    return false;
+                if (maxDate && releaseDate > maxDate)
+                    return false;
+                return true;
+            }
+            catch {
+                return false;
+            }
+        });
+    }
+    /**
+     * Sort and limit versions
+     */
+    limitVersions(cycles, maxVersions, sortOrder) {
+        if (!maxVersions)
+            return cycles;
+        // Sort cycles by release date
+        const sorted = [...cycles].sort((a, b) => {
+            const dateA = a.releaseDate ? (0, date_fns_1.parseISO)(a.releaseDate) : new Date(0);
+            const dateB = b.releaseDate ? (0, date_fns_1.parseISO)(b.releaseDate) : new Date(0);
+            if (sortOrder === 'newest-first') {
+                return dateB.getTime() - dateA.getTime();
+            }
+            else {
+                return dateA.getTime() - dateB.getTime();
+            }
+        });
+        return sorted.slice(0, maxVersions);
+    }
+    /**
      * Analyze all cycles for a product
      */
-    async analyzeProduct(product, specificCycles) {
+    async analyzeProduct(product, specificCycles, minReleaseDate, maxReleaseDate, maxVersions, versionSortOrder = 'newest-first') {
         core.info(`Analyzing product: ${product}`);
         try {
-            const cycles = await this.client.getProductCycles(product);
+            let cycles = await this.client.getProductCycles(product);
             if (specificCycles && specificCycles.length > 0) {
                 // Filter to specific cycles
-                const filteredCycles = cycles.filter((cycle) => specificCycles.includes(String(cycle.cycle)));
-                if (filteredCycles.length === 0) {
+                cycles = cycles.filter((cycle) => specificCycles.includes(String(cycle.cycle)));
+                if (cycles.length === 0) {
                     core.warning(`No matching cycles found for ${product}. Requested: ${specificCycles.join(', ')}`);
                 }
-                return filteredCycles.map((cycle) => this.analyzeProductCycle(product, cycle));
             }
+            // Apply date filtering
+            cycles = this.filterByReleaseDate(cycles, minReleaseDate, maxReleaseDate);
+            // Apply version limiting
+            cycles = this.limitVersions(cycles, maxVersions ?? null, versionSortOrder);
             return cycles.map((cycle) => this.analyzeProductCycle(product, cycle));
         }
         catch (error) {
@@ -55282,7 +55328,7 @@ class EolAnalyzer {
     /**
      * Analyze multiple products
      */
-    async analyzeProducts(products, cyclesMap, versionMap, semanticFallback = true) {
+    async analyzeProducts(products, cyclesMap, versionMap, semanticFallback = true, minReleaseDate, maxReleaseDate, maxVersions, versionSortOrder = 'newest-first') {
         const allResults = [];
         for (const product of products) {
             try {
@@ -55303,7 +55349,7 @@ class EolAnalyzer {
                 else {
                     // Multi-cycle mode - existing logic
                     const specificCycles = cyclesMap?.[product];
-                    const results = await this.analyzeProduct(product, specificCycles);
+                    const results = await this.analyzeProduct(product, specificCycles, minReleaseDate, maxReleaseDate, maxVersions, versionSortOrder);
                     allResults.push(...results);
                 }
             }
@@ -55823,10 +55869,33 @@ async function run() {
             }
         }
         core.info(`Analyzing ${products.length} product(s)...`);
+        // Parse date filters
+        let minReleaseDate;
+        let maxReleaseDate;
+        if (inputs.minReleaseDate) {
+            const parsed = (0, inputs_1.parseDateFilter)(inputs.minReleaseDate);
+            minReleaseDate = parsed.date;
+            core.info(`Filtering versions released on or after: ${parsed.date.toISOString().split('T')[0]}`);
+        }
+        if (inputs.maxReleaseDate) {
+            const parsed = (0, inputs_1.parseDateFilter)(inputs.maxReleaseDate);
+            maxReleaseDate = parsed.date;
+            core.info(`Filtering versions released on or before: ${parsed.date.toISOString().split('T')[0]}`);
+        }
+        if (inputs.maxVersions) {
+            core.info(`Limiting to maximum ${inputs.maxVersions} versions per product (${inputs.versionSortOrder})`);
+        }
         // Initialize analyzer
         const analyzer = new analyzer_1.EolAnalyzer(client, inputs.eolThresholdDays);
-        // Analyze products
-        const results = await analyzer.analyzeProducts(products, cyclesMap, versionMap, inputs.semanticVersionFallback);
+        // Analyze products with filtering
+        const results = await analyzer.analyzeProducts(products, cyclesMap, versionMap, inputs.semanticVersionFallback, minReleaseDate, maxReleaseDate, inputs.maxVersions, inputs.versionSortOrder);
+        // Generate matrix outputs if requested
+        if (inputs.outputMatrix) {
+            core.info('Generating matrix outputs...');
+            results.matrix = (0, outputs_1.generateMatrix)(results, inputs.excludeEolFromMatrix, inputs.excludeApproachingEolFromMatrix);
+            results.matrixInclude = (0, outputs_1.generateMatrixInclude)(results, inputs.excludeEolFromMatrix, inputs.excludeApproachingEolFromMatrix);
+            core.info(`Matrix contains ${results.matrix.versions.length} version(s)`);
+        }
         // Log summary
         core.info('\n' + results.summary);
         // Set outputs
@@ -55939,6 +56008,8 @@ exports.getInputs = getInputs;
 exports.parseProducts = parseProducts;
 exports.parseCycles = parseCycles;
 exports.validateInputs = validateInputs;
+exports.validateDateFilter = validateDateFilter;
+exports.parseDateFilter = parseDateFilter;
 const core = __importStar(__nccwpck_require__(37484));
 const error_utils_1 = __nccwpck_require__(82483);
 /**
@@ -55969,6 +56040,17 @@ function getInputs() {
     const versionRegex = core.getInput('version-regex') || '';
     const version = core.getInput('version') || '';
     const semanticVersionFallback = core.getBooleanInput('semantic-version-fallback');
+    // Matrix output inputs
+    const outputMatrix = core.getBooleanInput('output-matrix');
+    const excludeEolFromMatrix = core.getBooleanInput('exclude-eol-from-matrix');
+    const excludeApproachingEolFromMatrix = core.getBooleanInput('exclude-approaching-eol-from-matrix');
+    // Filtering inputs
+    const minReleaseDate = core.getInput('min-release-date') || '';
+    const maxReleaseDate = core.getInput('max-release-date') || '';
+    const maxVersionsInput = core.getInput('max-versions') || '';
+    const maxVersions = maxVersionsInput ? parseInt(maxVersionsInput, 10) : null;
+    const versionSortOrder = (core.getInput('version-sort-order') ||
+        'newest-first');
     return {
         products,
         cycles,
@@ -55991,6 +56073,13 @@ function getInputs() {
         versionRegex,
         version,
         semanticVersionFallback,
+        outputMatrix,
+        excludeEolFromMatrix,
+        excludeApproachingEolFromMatrix,
+        minReleaseDate,
+        maxReleaseDate,
+        maxVersions,
+        versionSortOrder,
     };
 }
 /**
@@ -56065,6 +56154,79 @@ function validateInputs(inputs) {
             throw new Error('For single product tracking, either file-path, version, or cycles must be specified');
         }
     }
+    // Validate date filtering inputs
+    if (inputs.minReleaseDate) {
+        validateDateFilter(inputs.minReleaseDate, 'min-release-date');
+    }
+    if (inputs.maxReleaseDate) {
+        validateDateFilter(inputs.maxReleaseDate, 'max-release-date');
+    }
+    // Validate max-versions
+    if (inputs.maxVersions !== null &&
+        inputs.maxVersions !== undefined &&
+        inputs.maxVersions <= 0) {
+        throw new Error('max-versions must be a positive integer');
+    }
+    // Validate version-sort-order
+    if (!['newest-first', 'oldest-first'].includes(inputs.versionSortOrder)) {
+        throw new Error('version-sort-order must be newest-first or oldest-first');
+    }
+}
+/**
+ * Validate date filter format
+ */
+function validateDateFilter(dateStr, fieldName) {
+    // Remove operators
+    const cleanDate = dateStr.replace(/^(>=|<=)/, '');
+    // Check if it's a year (YYYY)
+    if (/^\d{4}$/.test(cleanDate)) {
+        const year = parseInt(cleanDate, 10);
+        if (year < 1900 || year > 2100) {
+            throw new Error(`${fieldName}: Year must be between 1900 and 2100`);
+        }
+        return;
+    }
+    // Check if it's a full date (YYYY-MM-DD)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
+        const date = new Date(cleanDate);
+        if (isNaN(date.getTime())) {
+            throw new Error(`${fieldName}: Invalid date format. Use YYYY-MM-DD`);
+        }
+        return;
+    }
+    throw new Error(`${fieldName}: Invalid date format. Use YYYY, YYYY-MM-DD, >=YYYY, or <=YYYY`);
+}
+/**
+ * Parse date filter with operators
+ */
+function parseDateFilter(dateStr) {
+    let operator = '=';
+    let cleanDate = dateStr;
+    if (dateStr.startsWith('>=')) {
+        operator = '>=';
+        cleanDate = dateStr.substring(2);
+    }
+    else if (dateStr.startsWith('<=')) {
+        operator = '<=';
+        cleanDate = dateStr.substring(2);
+    }
+    // If it's just a year, convert to full date
+    if (/^\d{4}$/.test(cleanDate)) {
+        // For >= use start of year, for <= use end of year
+        if (operator === '>=') {
+            cleanDate = `${cleanDate}-01-01`;
+        }
+        else if (operator === '<=') {
+            cleanDate = `${cleanDate}-12-31`;
+        }
+        else {
+            cleanDate = `${cleanDate}-01-01`;
+        }
+    }
+    return {
+        operator,
+        date: new Date(cleanDate),
+    };
 }
 
 
@@ -56115,6 +56277,8 @@ exports.formatAsJson = formatAsJson;
 exports.formatAsMarkdown = formatAsMarkdown;
 exports.writeToStepSummary = writeToStepSummary;
 exports.writeToFile = writeToFile;
+exports.generateMatrix = generateMatrix;
+exports.generateMatrixInclude = generateMatrixInclude;
 exports.setOutputs = setOutputs;
 exports.createIssueBody = createIssueBody;
 const core = __importStar(__nccwpck_require__(37484));
@@ -56198,6 +56362,45 @@ async function writeToFile(filePath, content) {
     }
 }
 /**
+ * Generate simple matrix output for GitHub Actions
+ */
+function generateMatrix(results, excludeEol = true, excludeApproachingEol = false) {
+    let products = results.products;
+    // Filter based on EOL status
+    if (excludeEol) {
+        products = products.filter((p) => p.status !== types_1.EolStatus.END_OF_LIFE);
+    }
+    if (excludeApproachingEol) {
+        products = products.filter((p) => p.status !== types_1.EolStatus.APPROACHING_EOL);
+    }
+    // Extract unique cycles/versions
+    const versions = products.map((p) => p.cycle);
+    return { versions };
+}
+/**
+ * Generate detailed matrix output with metadata
+ */
+function generateMatrixInclude(results, excludeEol = true, excludeApproachingEol = false) {
+    let products = results.products;
+    // Filter based on EOL status
+    if (excludeEol) {
+        products = products.filter((p) => p.status !== types_1.EolStatus.END_OF_LIFE);
+    }
+    if (excludeApproachingEol) {
+        products = products.filter((p) => p.status !== types_1.EolStatus.APPROACHING_EOL);
+    }
+    // Map to detailed matrix items
+    const include = products.map((p) => ({
+        version: p.cycle,
+        cycle: p.cycle,
+        isLts: p.isLts,
+        eolDate: p.eolDate,
+        status: p.status,
+        releaseDate: p.releaseDate,
+    }));
+    return { include };
+}
+/**
  * Set action outputs
  */
 function setOutputs(results) {
@@ -56210,6 +56413,13 @@ function setOutputs(results) {
     core.setOutput('summary', results.summary);
     core.setOutput('total-products-checked', results.totalProductsChecked);
     core.setOutput('total-cycles-checked', results.totalCyclesChecked);
+    // Matrix outputs (if generated)
+    if (results.matrix) {
+        core.setOutput('matrix', JSON.stringify(results.matrix));
+    }
+    if (results.matrixInclude) {
+        core.setOutput('matrix-include', JSON.stringify(results.matrixInclude));
+    }
 }
 /**
  * Create issue body for EOL detection
@@ -56326,6 +56536,15 @@ exports.ActionInputsSchema = zod_1.z.object({
     versionRegex: zod_1.z.string(),
     version: zod_1.z.string(),
     semanticVersionFallback: zod_1.z.boolean(),
+    // Matrix output inputs
+    outputMatrix: zod_1.z.boolean(),
+    excludeEolFromMatrix: zod_1.z.boolean(),
+    excludeApproachingEolFromMatrix: zod_1.z.boolean(),
+    // Filtering inputs
+    minReleaseDate: zod_1.z.string(),
+    maxReleaseDate: zod_1.z.string(),
+    maxVersions: zod_1.z.number().int().positive().optional().nullable(),
+    versionSortOrder: zod_1.z.enum(['newest-first', 'oldest-first']),
 });
 /**
  * EOL Status enumeration
