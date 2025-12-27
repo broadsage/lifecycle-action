@@ -107,6 +107,15 @@ describe('Input Parsing and Validation', () => {
             versionRegex: '',
             version: '',
             semanticVersionFallback: true,
+            // Matrix output properties
+            outputMatrix: false,
+            excludeEolFromMatrix: false,
+            excludeApproachingEolFromMatrix: false,
+            // Filtering properties
+            minReleaseDate: '',
+            maxReleaseDate: '',
+            maxVersions: null,
+            versionSortOrder: 'newest-first',
         };
 
         it('should validate correct inputs', () => {
@@ -214,6 +223,165 @@ describe('Input Parsing and Validation', () => {
             expect(() => validateInputs(inputs)).toThrow(
                 'version-regex is required when file-format is text'
             );
+        });
+
+        it('should throw error for invalid file format', () => {
+            const inputs = {
+                ...validInputs,
+                filePath: 'test.txt',
+                fileFormat: 'invalid' as any,
+                fileKey: 'key',
+            };
+
+            expect(() => validateInputs(inputs)).toThrow(
+                'File format must be yaml, json, or text'
+            );
+        });
+
+        it('should require file-path, version, or cycles for single product', () => {
+            const inputs = {
+                ...validInputs,
+                products: 'python',
+                cycles: '{}',
+                filePath: '',
+                version: '',
+            };
+
+            expect(() => validateInputs(inputs)).toThrow(
+                'For single product tracking, either file-path, version, or cycles must be specified'
+            );
+        });
+
+        it('should not require file-path/version/cycles for multiple products', () => {
+            const inputs = {
+                ...validInputs,
+                products: 'python,nodejs',
+                cycles: '{}',
+                filePath: '',
+                version: '',
+            };
+
+            expect(() => validateInputs(inputs)).not.toThrow();
+        });
+
+        it('should not require file-path/version/cycles for "all" products', () => {
+            const inputs = {
+                ...validInputs,
+                products: 'all',
+                cycles: '{}',
+                filePath: '',
+                version: '',
+            };
+
+            expect(() => validateInputs(inputs)).not.toThrow();
+        });
+
+        it('should throw error for invalid max-versions', () => {
+            const inputs = {
+                ...validInputs,
+                maxVersions: 0,
+            };
+
+            expect(() => validateInputs(inputs)).toThrow(
+                'max-versions must be a positive integer'
+            );
+        });
+
+        it('should throw error for invalid version-sort-order', () => {
+            const inputs = {
+                ...validInputs,
+                versionSortOrder: 'invalid' as any,
+            };
+
+            expect(() => validateInputs(inputs)).toThrow(
+                'version-sort-order must be newest-first or oldest-first'
+            );
+        });
+    });
+
+    describe('validateDateFilter', () => {
+        const { validateDateFilter } = require('../src/inputs');
+
+        it('should accept valid year format', () => {
+            expect(() => validateDateFilter('2023', 'test-field')).not.toThrow();
+        });
+
+        it('should accept year with >= operator', () => {
+            expect(() => validateDateFilter('>=2023', 'test-field')).not.toThrow();
+        });
+
+        it('should accept year with <= operator', () => {
+            expect(() => validateDateFilter('<=2023', 'test-field')).not.toThrow();
+        });
+
+        it('should accept valid date format', () => {
+            expect(() =>
+                validateDateFilter('2023-01-15', 'test-field')
+            ).not.toThrow();
+        });
+
+        it('should throw error for year out of range (too low)', () => {
+            expect(() => validateDateFilter('1899', 'test-field')).toThrow(
+                'Year must be between 1900 and 2100'
+            );
+        });
+
+        it('should throw error for year out of range (too high)', () => {
+            expect(() => validateDateFilter('2101', 'test-field')).toThrow(
+                'Year must be between 1900 and 2100'
+            );
+        });
+
+        it('should throw error for invalid date', () => {
+            expect(() => validateDateFilter('2023-13-45', 'test-field')).toThrow(
+                'Invalid date format'
+            );
+        });
+
+        it('should throw error for invalid format', () => {
+            expect(() => validateDateFilter('invalid', 'test-field')).toThrow(
+                'Invalid date format'
+            );
+        });
+    });
+
+    describe('parseDateFilter', () => {
+        const { parseDateFilter } = require('../src/inputs');
+
+        it('should parse year with >= operator', () => {
+            const result = parseDateFilter('>=2023');
+            expect(result.operator).toBe('>=');
+            expect(result.date).toEqual(new Date('2023-01-01'));
+        });
+
+        it('should parse year with <= operator', () => {
+            const result = parseDateFilter('<=2023');
+            expect(result.operator).toBe('<=');
+            expect(result.date).toEqual(new Date('2023-12-31'));
+        });
+
+        it('should parse year without operator', () => {
+            const result = parseDateFilter('2023');
+            expect(result.operator).toBe('=');
+            expect(result.date).toEqual(new Date('2023-01-01'));
+        });
+
+        it('should parse full date', () => {
+            const result = parseDateFilter('2023-06-15');
+            expect(result.operator).toBe('=');
+            expect(result.date).toEqual(new Date('2023-06-15'));
+        });
+
+        it('should parse full date with >= operator', () => {
+            const result = parseDateFilter('>=2023-06-15');
+            expect(result.operator).toBe('>=');
+            expect(result.date).toEqual(new Date('2023-06-15'));
+        });
+
+        it('should parse full date with <= operator', () => {
+            const result = parseDateFilter('<=2023-06-15');
+            expect(result.operator).toBe('<=');
+            expect(result.date).toEqual(new Date('2023-06-15'));
         });
     });
 });
