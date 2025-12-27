@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: 2025 Broadsage
 
-name: 'Broadsage EOL GitHub Action'
+name: 'EOL GitHub Action'
 description: 'Identifies the End-of-life (EoL) dates for products, using the endoflife.date API'
 author: 'Broadsage'
 
