@@ -1,0 +1,26 @@
+name: EOL Check with Discord Notifications
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight
+  workflow_dispatch:
+
+jobs:
+  eol-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check EOL Status
+        uses: broadsage/endoflife-action@v3
+        with:
+          # Products to track
+          products: 'ubuntu,debian,alpine,nginx'
+          
+          # Discord notification
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
+          
+          # Notification settings
+          notify-on-approaching-eol: true
+          notification-threshold-days: 60
+          
+          # Don't fail, just notify
+          fail-on-eol: false

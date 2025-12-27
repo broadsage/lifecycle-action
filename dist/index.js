@@ -55815,6 +55815,7 @@ const version_extractor_1 = __nccwpck_require__(95254);
 const error_utils_1 = __nccwpck_require__(82483);
 const inputs_1 = __nccwpck_require__(38422);
 const outputs_1 = __nccwpck_require__(7729);
+const notifications_1 = __nccwpck_require__(53688);
 /**
  * Main action entry point
  */
@@ -55932,6 +55933,29 @@ async function run() {
             else {
                 core.warning('Failed to create or update issue');
             }
+        }
+        // Send notifications to configured channels
+        try {
+            const notificationConfig = (0, notifications_1.getNotificationConfig)();
+            if (notificationConfig.enabled) {
+                core.info('Sending notifications to configured channels...');
+                const notificationManager = new notifications_1.NotificationManager(notificationConfig);
+                // Add all configured channels
+                const channels = notifications_1.NotificationChannelFactory.createFromInputs();
+                channels.forEach((channel) => notificationManager.addChannel(channel));
+                if (notificationManager.getChannelCount() > 0) {
+                    const notificationResults = await notificationManager.sendAll(results);
+                    const successful = notificationResults.filter((r) => r.success).length;
+                    core.info(`Notifications sent: ${successful}/${notificationResults.length} successful`);
+                }
+                else {
+                    core.debug('No notification channels configured');
+                }
+            }
+        }
+        catch (error) {
+            // Don't fail the action if notifications fail
+            core.warning(`Failed to send notifications: ${(0, error_utils_1.getErrorMessage)(error)}`);
         }
         // Log cache statistics
         const cacheStats = client.getCacheStats();
@@ -56228,6 +56252,1106 @@ function parseDateFilter(dateStr) {
         date: new Date(cleanDate),
     };
 }
+
+
+/***/ }),
+
+/***/ 74633:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 Broadsage
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BaseNotificationChannel = void 0;
+const core = __importStar(__nccwpck_require__(37484));
+const http_client_1 = __nccwpck_require__(54844);
+const types_1 = __nccwpck_require__(41905);
+/**
+ * Base class for notification channels with common functionality
+ */
+class BaseNotificationChannel {
+    webhookUrl;
+    retryAttempts;
+    retryDelayMs;
+    constructor(webhookUrl, retryAttempts = 3, retryDelayMs = 1000) {
+        this.webhookUrl = webhookUrl;
+        this.retryAttempts = retryAttempts;
+        this.retryDelayMs = retryDelayMs;
+    }
+    /**
+     * Send notification with retry logic
+     */
+    async send(message) {
+        let lastError;
+        for (let attempt = 1; attempt <= this.retryAttempts; attempt++) {
+            try {
+                core.debug(`[${this.name}] Sending notification (attempt ${attempt}/${this.retryAttempts})`);
+                const payload = this.buildPayload(message);
+                await this.sendRequest(payload);
+                core.info(`[${this.name}] Notification sent successfully`);
+                return;
+            }
+            catch (error) {
+                lastError = error instanceof Error ? error : new Error(String(error));
+                core.warning(`[${this.name}] Attempt ${attempt} failed: ${lastError.message}`);
+                if (attempt < this.retryAttempts) {
+                    const delay = this.retryDelayMs * Math.pow(2, attempt - 1); // Exponential backoff
+                    core.debug(`[${this.name}] Waiting ${delay}ms before retry...`);
+                    await this.sleep(delay);
+                }
+            }
+        }
+        throw new Error(`[${this.name}] Failed to send notification after ${this.retryAttempts} attempts: ${lastError?.message}`);
+    }
+    /**
+     * Format action results into notification message
+     */
+    formatMessage(results) {
+        const severity = this.determineSeverity(results);
+        const repository = process.env.GITHUB_REPOSITORY || 'Unknown';
+        const runId = process.env.GITHUB_RUN_ID || '';
+        const runUrl = runId
+            ? `https://github.com/${repository}/actions/runs/${runId}`
+            : '';
+        return {
+            title: this.buildTitle(results),
+            summary: this.buildSummary(results),
+            severity,
+            fields: this.buildFields(results),
+            timestamp: new Date(),
+            repository,
+            runUrl,
+            color: this.getColorForSeverity(severity),
+        };
+    }
+    /**
+     * Validate channel configuration
+     */
+    validate() {
+        if (!this.webhookUrl) {
+            core.warning(`[${this.name}] Webhook URL is not configured`);
+            return false;
+        }
+        try {
+            new URL(this.webhookUrl);
+            return true;
+        }
+        catch {
+            core.warning(`[${this.name}] Invalid webhook URL: ${this.webhookUrl}`);
+            return false;
+        }
+    }
+    /**
+     * Send HTTP request to webhook
+     */
+    async sendRequest(payload) {
+        try {
+            const client = new http_client_1.HttpClient('Broadsage-EOL-Action/1.0');
+            const response = await client.postJson(this.webhookUrl, payload, {
+                'Content-Type': 'application/json',
+            });
+            if (!response.statusCode || response.statusCode < 200 || response.statusCode >= 300) {
+                throw new Error(`HTTP ${response.statusCode || 'unknown'}: Request failed`);
+            }
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Webhook request failed: ${errorMessage}`);
+        }
+    }
+    /**
+     * Determine notification severity based on results
+     */
+    determineSeverity(results) {
+        if (results.eolDetected) {
+            return types_1.NotificationSeverity.ERROR;
+        }
+        if (results.approachingEol) {
+            return types_1.NotificationSeverity.WARNING;
+        }
+        return types_1.NotificationSeverity.INFO;
+    }
+    /**
+     * Build notification title
+     */
+    buildTitle(results) {
+        if (results.eolDetected) {
+            return '🚨 End-of-Life Detected';
+        }
+        if (results.approachingEol) {
+            return '⚠️ Versions Approaching End-of-Life';
+        }
+        return '✅ All Versions Supported';
+    }
+    /**
+     * Build notification summary
+     */
+    buildSummary(results) {
+        const parts = [];
+        if (results.eolDetected) {
+            parts.push(`${results.eolProducts.length} version(s) have reached end-of-life`);
+        }
+        if (results.approachingEol) {
+            parts.push(`${results.approachingEolProducts.length} version(s) approaching end-of-life`);
+        }
+        if (parts.length === 0) {
+            parts.push('All tracked versions are currently supported');
+        }
+        return parts.join('. ');
+    }
+    /**
+     * Build notification fields
+     */
+    buildFields(results) {
+        const fields = [
+            {
+                name: 'Products Checked',
+                value: results.totalProductsChecked.toString(),
+                inline: true,
+            },
+            {
+                name: 'Cycles Checked',
+                value: results.totalCyclesChecked.toString(),
+                inline: true,
+            },
+        ];
+        if (results.eolDetected) {
+            fields.push({
+                name: 'EOL Versions',
+                value: results.eolProducts.length.toString(),
+                inline: true,
+            });
+        }
+        if (results.approachingEol) {
+            fields.push({
+                name: 'Approaching EOL',
+                value: results.approachingEolProducts.length.toString(),
+                inline: true,
+            });
+        }
+        // Add top EOL products
+        if (results.eolProducts.length > 0) {
+            const topEol = results.eolProducts
+                .slice(0, 3)
+                .map((p) => `• ${p.product} ${p.cycle}`)
+                .join('\n');
+            fields.push({
+                name: 'EOL Products',
+                value: topEol,
+                inline: false,
+            });
+        }
+        return fields;
+    }
+    /**
+     * Get color code for severity
+     */
+    getColorForSeverity(severity) {
+        switch (severity) {
+            case types_1.NotificationSeverity.CRITICAL:
+                return '#8B0000'; // Dark red
+            case types_1.NotificationSeverity.ERROR:
+                return '#FF0000'; // Red
+            case types_1.NotificationSeverity.WARNING:
+                return '#FFA500'; // Orange
+            case types_1.NotificationSeverity.INFO:
+                return '#00FF00'; // Green
+            default:
+                return '#808080'; // Gray
+        }
+    }
+    /**
+     * Sleep utility for retry delays
+     */
+    sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+    /**
+     * Truncate text to maximum length
+     */
+    truncate(text, maxLength) {
+        if (text.length <= maxLength) {
+            return text;
+        }
+        return text.substring(0, maxLength - 3) + '...';
+    }
+}
+exports.BaseNotificationChannel = BaseNotificationChannel;
+
+
+/***/ }),
+
+/***/ 82725:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 Broadsage
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DiscordChannel = void 0;
+const base_channel_1 = __nccwpck_require__(74633);
+const types_1 = __nccwpck_require__(41905);
+/**
+ * Discord notification channel
+ */
+class DiscordChannel extends base_channel_1.BaseNotificationChannel {
+    name = 'Discord';
+    type = types_1.NotificationChannelType.DISCORD;
+    /**
+     * Build Discord-specific payload
+     */
+    buildPayload(message) {
+        const embed = {
+            title: message.title,
+            description: this.truncate(message.summary, 4096),
+            color: this.hexToDecimal(message.color || '#808080'),
+            fields: message.fields
+                .slice(0, 25) // Discord limit
+                .map((field) => ({
+                name: this.truncate(field.name, 256),
+                value: this.truncate(field.value, 1024),
+                inline: field.inline !== false,
+            })),
+            timestamp: message.timestamp.toISOString(),
+        };
+        // Add repository as author
+        if (message.repository) {
+            embed.author = {
+                name: message.repository,
+                url: `https://github.com/${message.repository}`,
+            };
+        }
+        // Add footer with run URL
+        if (message.runUrl) {
+            embed.footer = {
+                text: 'Click to view workflow run',
+            };
+        }
+        return {
+            content: message.runUrl
+                ? `🔗 [View Workflow Run](${message.runUrl})`
+                : undefined,
+            embeds: [embed],
+        };
+    }
+    /**
+     * Convert hex color to decimal for Discord
+     */
+    hexToDecimal(hex) {
+        return parseInt(hex.replace('#', ''), 16);
+    }
+}
+exports.DiscordChannel = DiscordChannel;
+
+
+/***/ }),
+
+/***/ 41253:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 Broadsage
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GoogleChatChannel = void 0;
+const base_channel_1 = __nccwpck_require__(74633);
+const types_1 = __nccwpck_require__(41905);
+/**
+ * Google Chat notification channel
+ */
+class GoogleChatChannel extends base_channel_1.BaseNotificationChannel {
+    name = 'Google Chat';
+    type = types_1.NotificationChannelType.GOOGLE_CHAT;
+    /**
+     * Build Google Chat-specific payload
+     */
+    buildPayload(message) {
+        const widgets = [];
+        // Add summary as text paragraph
+        widgets.push({
+            textParagraph: {
+                text: message.summary,
+            },
+        });
+        // Add fields as key-value widgets
+        message.fields.forEach((field) => {
+            widgets.push({
+                keyValue: {
+                    topLabel: field.name,
+                    content: field.value,
+                    contentMultiline: !field.inline,
+                    icon: this.getIconForField(field.name),
+                },
+            });
+        });
+        // Add button to view workflow run
+        if (message.runUrl) {
+            widgets.push({
+                buttons: [
+                    {
+                        textButton: {
+                            text: 'VIEW WORKFLOW RUN',
+                            onClick: {
+                                openLink: {
+                                    url: message.runUrl,
+                                },
+                            },
+                        },
+                    },
+                ],
+            });
+        }
+        const card = {
+            header: {
+                title: message.title,
+                subtitle: message.repository
+                    ? `Repository: ${message.repository}`
+                    : undefined,
+                imageUrl: this.getImageForSeverity(message.severity),
+            },
+            sections: [
+                {
+                    widgets,
+                },
+            ],
+        };
+        return {
+            text: message.title, // Fallback text
+            cards: [card],
+        };
+    }
+    /**
+     * Get icon for field name
+     */
+    getIconForField(fieldName) {
+        const icons = {
+            'Products Checked': 'DESCRIPTION',
+            'Cycles Checked': 'BOOKMARK',
+            'EOL Versions': 'STAR',
+            'Approaching EOL': 'CLOCK',
+        };
+        return icons[fieldName] || 'DESCRIPTION';
+    }
+    /**
+     * Get image URL for severity
+     */
+    getImageForSeverity(severity) {
+        // Using Google's Material Icons
+        const baseUrl = 'https://www.gstatic.com/images/icons/material/system/1x';
+        switch (severity) {
+            case 'error':
+            case 'critical':
+                return `${baseUrl}/error_outline_red_24dp.png`;
+            case 'warning':
+                return `${baseUrl}/warning_amber_24dp.png`;
+            default:
+                return `${baseUrl}/check_circle_outline_green_24dp.png`;
+        }
+    }
+}
+exports.GoogleChatChannel = GoogleChatChannel;
+
+
+/***/ }),
+
+/***/ 87877:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 Broadsage
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SlackChannel = void 0;
+const base_channel_1 = __nccwpck_require__(74633);
+const types_1 = __nccwpck_require__(41905);
+/**
+ * Slack notification channel
+ */
+class SlackChannel extends base_channel_1.BaseNotificationChannel {
+    name = 'Slack';
+    type = types_1.NotificationChannelType.SLACK;
+    /**
+     * Build Slack-specific payload
+     */
+    buildPayload(message) {
+        const blocks = [];
+        // Header block
+        blocks.push({
+            type: 'header',
+            text: {
+                type: 'plain_text',
+                text: message.title,
+                emoji: true,
+            },
+        });
+        // Context block with repository and timestamp
+        if (message.repository) {
+            blocks.push({
+                type: 'context',
+                elements: [
+                    {
+                        type: 'mrkdwn',
+                        text: `📦 *Repository:* ${message.repository}`,
+                    },
+                    {
+                        type: 'mrkdwn',
+                        text: `🕐 ${message.timestamp.toLocaleString()}`,
+                    },
+                ],
+            });
+        }
+        // Summary section
+        blocks.push({
+            type: 'section',
+            text: {
+                type: 'mrkdwn',
+                text: message.summary,
+            },
+        });
+        // Fields section (2 columns)
+        if (message.fields.length > 0) {
+            const inlineFields = message.fields
+                .filter((f) => f.inline !== false)
+                .slice(0, 10); // Slack limit
+            if (inlineFields.length > 0) {
+                blocks.push({
+                    type: 'section',
+                    fields: inlineFields.map((field) => ({
+                        type: 'mrkdwn',
+                        text: `*${field.name}*\n${field.value}`,
+                    })),
+                });
+            }
+            // Non-inline fields
+            const nonInlineFields = message.fields.filter((f) => f.inline === false);
+            nonInlineFields.forEach((field) => {
+                blocks.push({
+                    type: 'section',
+                    text: {
+                        type: 'mrkdwn',
+                        text: `*${field.name}*\n${field.value}`,
+                    },
+                });
+            });
+        }
+        // Divider
+        blocks.push({
+            type: 'divider',
+        });
+        // Action button to view workflow run
+        if (message.runUrl) {
+            blocks.push({
+                type: 'section',
+                text: {
+                    type: 'mrkdwn',
+                    text: 'View the full report in GitHub Actions:',
+                },
+                accessory: {
+                    type: 'button',
+                    text: {
+                        type: 'plain_text',
+                        text: 'View Workflow Run',
+                    },
+                    url: message.runUrl,
+                },
+            });
+        }
+        return {
+            text: message.title, // Fallback text for notifications
+            blocks,
+        };
+    }
+}
+exports.SlackChannel = SlackChannel;
+
+
+/***/ }),
+
+/***/ 19611:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 Broadsage
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TeamsChannel = void 0;
+const base_channel_1 = __nccwpck_require__(74633);
+const types_1 = __nccwpck_require__(41905);
+/**
+ * Microsoft Teams notification channel
+ */
+class TeamsChannel extends base_channel_1.BaseNotificationChannel {
+    name = 'Microsoft Teams';
+    type = types_1.NotificationChannelType.TEAMS;
+    /**
+     * Build Teams-specific payload
+     */
+    buildPayload(message) {
+        const facts = message.fields.map((field) => ({
+            title: field.name,
+            value: field.value,
+        }));
+        const sections = [
+            {
+                activityTitle: message.title,
+                activitySubtitle: message.repository || 'EOL Check',
+                text: message.summary,
+            },
+        ];
+        // Add facts section if we have fields
+        if (facts.length > 0) {
+            sections.push({
+                facts: facts.slice(0, 10), // Limit to prevent message being too large
+            });
+        }
+        const card = {
+            '@type': 'MessageCard',
+            '@context': 'https://schema.org/extensions',
+            summary: message.title,
+            themeColor: this.getTeamsColor(message.color || '#808080'),
+            title: message.title,
+            sections,
+        };
+        // Add action button if run URL is available
+        if (message.runUrl) {
+            card.potentialAction = [
+                {
+                    type: 'OpenUri',
+                    title: 'View Workflow Run',
+                    url: message.runUrl,
+                },
+            ];
+        }
+        return card;
+    }
+    /**
+     * Convert hex color to Teams-compatible format
+     */
+    getTeamsColor(hex) {
+        // Teams expects hex without the # prefix
+        return hex.replace('#', '');
+    }
+}
+exports.TeamsChannel = TeamsChannel;
+
+
+/***/ }),
+
+/***/ 87460:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 Broadsage
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WebhookChannel = void 0;
+const http_client_1 = __nccwpck_require__(54844);
+const base_channel_1 = __nccwpck_require__(74633);
+const types_1 = __nccwpck_require__(41905);
+/**
+ * Generic webhook notification channel
+ * Sends a standardized JSON payload that can be consumed by any webhook endpoint
+ */
+class WebhookChannel extends base_channel_1.BaseNotificationChannel {
+    name = 'Generic Webhook';
+    type = types_1.NotificationChannelType.WEBHOOK;
+    customHeaders;
+    constructor(webhookUrl, customHeaders = {}, retryAttempts = 3, retryDelayMs = 1000) {
+        super(webhookUrl, retryAttempts, retryDelayMs);
+        this.customHeaders = customHeaders;
+    }
+    /**
+     * Build generic webhook payload
+     */
+    buildPayload(message) {
+        return {
+            event: 'eol_check_completed',
+            timestamp: message.timestamp.toISOString(),
+            repository: message.repository || 'unknown',
+            severity: message.severity,
+            title: message.title,
+            summary: message.summary,
+            fields: message.fields,
+            runUrl: message.runUrl,
+            metadata: {
+                action: 'broadsage-eol-action',
+                version: '3.0.0',
+            },
+        };
+    }
+    /**
+     * Override sendRequest to include custom headers
+     */
+    async sendRequest(payload) {
+        try {
+            const client = new http_client_1.HttpClient('Broadsage-EOL-Action/1.0');
+            const response = await client.postJson(this.webhookUrl, payload, {
+                'Content-Type': 'application/json',
+                ...this.customHeaders,
+            });
+            if (!response.statusCode || response.statusCode < 200 || response.statusCode >= 300) {
+                throw new Error(`HTTP ${response.statusCode || 'unknown'}: Request failed`);
+            }
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Webhook request failed: ${errorMessage}`);
+        }
+    }
+}
+exports.WebhookChannel = WebhookChannel;
+
+
+/***/ }),
+
+/***/ 55950:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 Broadsage
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.NotificationChannelFactory = void 0;
+exports.getNotificationConfig = getNotificationConfig;
+const core = __importStar(__nccwpck_require__(37484));
+const slack_1 = __nccwpck_require__(87877);
+const discord_1 = __nccwpck_require__(82725);
+const teams_1 = __nccwpck_require__(19611);
+const google_chat_1 = __nccwpck_require__(41253);
+const webhook_1 = __nccwpck_require__(87460);
+const types_1 = __nccwpck_require__(41905);
+/**
+ * Factory for creating notification channels
+ */
+class NotificationChannelFactory {
+    /**
+     * Create a notification channel based on type and configuration
+     */
+    static create(type, webhookUrl, options = {}) {
+        const { retryAttempts = 3, retryDelayMs = 1000, customHeaders = {} } = options;
+        switch (type) {
+            case types_1.NotificationChannelType.SLACK:
+                return new slack_1.SlackChannel(webhookUrl, retryAttempts, retryDelayMs);
+            case types_1.NotificationChannelType.DISCORD:
+                return new discord_1.DiscordChannel(webhookUrl, retryAttempts, retryDelayMs);
+            case types_1.NotificationChannelType.TEAMS:
+                return new teams_1.TeamsChannel(webhookUrl, retryAttempts, retryDelayMs);
+            case types_1.NotificationChannelType.GOOGLE_CHAT:
+                return new google_chat_1.GoogleChatChannel(webhookUrl, retryAttempts, retryDelayMs);
+            case types_1.NotificationChannelType.WEBHOOK:
+                return new webhook_1.WebhookChannel(webhookUrl, customHeaders, retryAttempts, retryDelayMs);
+            default:
+                throw new Error(`Unsupported notification channel type: ${type}`);
+        }
+    }
+    /**
+     * Create channels from action inputs
+     */
+    static createFromInputs() {
+        const channels = [];
+        // Slack
+        const slackWebhook = core.getInput('slack-webhook-url');
+        if (slackWebhook) {
+            channels.push(this.create(types_1.NotificationChannelType.SLACK, slackWebhook));
+        }
+        // Discord
+        const discordWebhook = core.getInput('discord-webhook-url');
+        if (discordWebhook) {
+            channels.push(this.create(types_1.NotificationChannelType.DISCORD, discordWebhook));
+        }
+        // Microsoft Teams
+        const teamsWebhook = core.getInput('teams-webhook-url');
+        if (teamsWebhook) {
+            channels.push(this.create(types_1.NotificationChannelType.TEAMS, teamsWebhook));
+        }
+        // Google Chat
+        const googleChatWebhook = core.getInput('google-chat-webhook-url');
+        if (googleChatWebhook) {
+            channels.push(this.create(types_1.NotificationChannelType.GOOGLE_CHAT, googleChatWebhook));
+        }
+        // Generic Webhook
+        const customWebhook = core.getInput('custom-webhook-url');
+        if (customWebhook) {
+            const customHeadersInput = core.getInput('custom-webhook-headers');
+            let customHeaders = {};
+            if (customHeadersInput) {
+                try {
+                    customHeaders = JSON.parse(customHeadersInput);
+                }
+                catch (error) {
+                    core.warning(`Failed to parse custom-webhook-headers: ${error}. Using empty headers.`);
+                }
+            }
+            channels.push(this.create(types_1.NotificationChannelType.WEBHOOK, customWebhook, {
+                customHeaders,
+            }));
+        }
+        return channels;
+    }
+}
+exports.NotificationChannelFactory = NotificationChannelFactory;
+/**
+ * Get notification configuration from action inputs
+ */
+function getNotificationConfig() {
+    const enabled = core.getBooleanInput('enable-notifications') ||
+        // Auto-enable if any webhook URL is provided
+        !!(core.getInput('slack-webhook-url') ||
+            core.getInput('discord-webhook-url') ||
+            core.getInput('teams-webhook-url') ||
+            core.getInput('google-chat-webhook-url') ||
+            core.getInput('custom-webhook-url'));
+    const filters = {
+        onlyOnEol: core.getBooleanInput('notify-on-eol-only'),
+        includeApproachingEol: core.getBooleanInput('notify-on-approaching-eol'),
+        thresholdDays: parseInt(core.getInput('notification-threshold-days') || '90', 10),
+        minSeverity: (core.getInput('notification-min-severity') ||
+            'info'),
+    };
+    const retryAttempts = parseInt(core.getInput('notification-retry-attempts') || '3', 10);
+    const retryDelayMs = parseInt(core.getInput('notification-retry-delay-ms') || '1000', 10);
+    return {
+        enabled,
+        channels: [],
+        filters,
+        retryAttempts,
+        retryDelayMs,
+    };
+}
+
+
+/***/ }),
+
+/***/ 53688:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 Broadsage
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getNotificationConfig = exports.NotificationChannelFactory = exports.NotificationManager = exports.WebhookChannel = exports.GoogleChatChannel = exports.TeamsChannel = exports.DiscordChannel = exports.SlackChannel = exports.BaseNotificationChannel = void 0;
+/**
+ * Notification System
+ *
+ * This module provides a comprehensive notification system for sending
+ * EOL alerts to multiple messaging platforms including Slack, Discord,
+ * Microsoft Teams, Google Chat, and custom webhooks.
+ *
+ * @example
+ * ```typescript
+ * import { NotificationManager, NotificationChannelFactory, getNotificationConfig } from './notifications';
+ *
+ * const config = getNotificationConfig();
+ * const manager = new NotificationManager(config);
+ *
+ * const channels = NotificationChannelFactory.createFromInputs();
+ * channels.forEach(channel => manager.addChannel(channel));
+ *
+ * await manager.sendAll(results);
+ * ```
+ */
+// Types
+__exportStar(__nccwpck_require__(41905), exports);
+// Base classes
+var base_channel_1 = __nccwpck_require__(74633);
+Object.defineProperty(exports, "BaseNotificationChannel", ({ enumerable: true, get: function () { return base_channel_1.BaseNotificationChannel; } }));
+// Channels
+var slack_1 = __nccwpck_require__(87877);
+Object.defineProperty(exports, "SlackChannel", ({ enumerable: true, get: function () { return slack_1.SlackChannel; } }));
+var discord_1 = __nccwpck_require__(82725);
+Object.defineProperty(exports, "DiscordChannel", ({ enumerable: true, get: function () { return discord_1.DiscordChannel; } }));
+var teams_1 = __nccwpck_require__(19611);
+Object.defineProperty(exports, "TeamsChannel", ({ enumerable: true, get: function () { return teams_1.TeamsChannel; } }));
+var google_chat_1 = __nccwpck_require__(41253);
+Object.defineProperty(exports, "GoogleChatChannel", ({ enumerable: true, get: function () { return google_chat_1.GoogleChatChannel; } }));
+var webhook_1 = __nccwpck_require__(87460);
+Object.defineProperty(exports, "WebhookChannel", ({ enumerable: true, get: function () { return webhook_1.WebhookChannel; } }));
+// Manager and Factory
+var manager_1 = __nccwpck_require__(947);
+Object.defineProperty(exports, "NotificationManager", ({ enumerable: true, get: function () { return manager_1.NotificationManager; } }));
+var factory_1 = __nccwpck_require__(55950);
+Object.defineProperty(exports, "NotificationChannelFactory", ({ enumerable: true, get: function () { return factory_1.NotificationChannelFactory; } }));
+Object.defineProperty(exports, "getNotificationConfig", ({ enumerable: true, get: function () { return factory_1.getNotificationConfig; } }));
+
+
+/***/ }),
+
+/***/ 947:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 Broadsage
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.NotificationManager = void 0;
+const core = __importStar(__nccwpck_require__(37484));
+/**
+ * Notification Manager
+ * Orchestrates sending notifications to multiple channels
+ */
+class NotificationManager {
+    channels = [];
+    config;
+    constructor(config) {
+        this.config = config;
+    }
+    /**
+     * Add a notification channel
+     */
+    addChannel(channel) {
+        if (channel.validate()) {
+            this.channels.push(channel);
+            core.info(`[NotificationManager] Added channel: ${channel.name}`);
+        }
+        else {
+            core.warning(`[NotificationManager] Skipped invalid channel: ${channel.name}`);
+        }
+    }
+    /**
+     * Send notifications to all configured channels
+     */
+    async sendAll(results) {
+        if (!this.config.enabled) {
+            core.info('[NotificationManager] Notifications are disabled');
+            return [];
+        }
+        if (this.channels.length === 0) {
+            core.info('[NotificationManager] No notification channels configured');
+            return [];
+        }
+        // Check if we should send notifications based on filters
+        if (!this.shouldNotify(results)) {
+            core.info('[NotificationManager] Skipping notifications based on filter criteria');
+            return [];
+        }
+        core.info(`[NotificationManager] Sending notifications to ${this.channels.length} channel(s)`);
+        const notificationResults = [];
+        // Send to all channels in parallel
+        const promises = this.channels.map(async (channel) => {
+            const result = {
+                channel: channel.type,
+                success: false,
+                timestamp: new Date(),
+            };
+            try {
+                const message = channel.formatMessage(results);
+                await channel.send(message);
+                result.success = true;
+                core.info(`[NotificationManager] ✓ ${channel.name} notification sent`);
+            }
+            catch (error) {
+                result.error = error instanceof Error ? error : new Error(String(error));
+                core.error(`[NotificationManager] ✗ ${channel.name} notification failed: ${result.error.message}`);
+            }
+            return result;
+        });
+        const results_array = await Promise.allSettled(promises);
+        results_array.forEach((result) => {
+            if (result.status === 'fulfilled') {
+                notificationResults.push(result.value);
+            }
+            else {
+                core.error(`[NotificationManager] Unexpected error: ${result.reason}`);
+            }
+        });
+        // Summary
+        const successful = notificationResults.filter((r) => r.success).length;
+        const failed = notificationResults.filter((r) => !r.success).length;
+        core.info(`[NotificationManager] Notification summary: ${successful} successful, ${failed} failed`);
+        return notificationResults;
+    }
+    /**
+     * Determine if notifications should be sent based on filters
+     */
+    shouldNotify(results) {
+        const { filters } = this.config;
+        // If only notify on EOL and no EOL detected, skip
+        if (filters.onlyOnEol && !results.eolDetected) {
+            core.debug('[NotificationManager] No EOL detected, skipping notification');
+            return false;
+        }
+        // If not including approaching EOL and only approaching EOL detected, skip
+        if (!filters.includeApproachingEol &&
+            results.approachingEol &&
+            !results.eolDetected) {
+            core.debug('[NotificationManager] Only approaching EOL detected, skipping notification');
+            return false;
+        }
+        return true;
+    }
+    /**
+     * Get configured channels count
+     */
+    getChannelCount() {
+        return this.channels.length;
+    }
+    /**
+     * Get list of configured channel names
+     */
+    getChannelNames() {
+        return this.channels.map((c) => c.name);
+    }
+}
+exports.NotificationManager = NotificationManager;
+
+
+/***/ }),
+
+/***/ 41905:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 Broadsage
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.NotificationChannelType = exports.NotificationSeverity = void 0;
+/**
+ * Notification severity levels
+ */
+var NotificationSeverity;
+(function (NotificationSeverity) {
+    NotificationSeverity["INFO"] = "info";
+    NotificationSeverity["WARNING"] = "warning";
+    NotificationSeverity["ERROR"] = "error";
+    NotificationSeverity["CRITICAL"] = "critical";
+})(NotificationSeverity || (exports.NotificationSeverity = NotificationSeverity = {}));
+/**
+ * Supported notification channels
+ */
+var NotificationChannelType;
+(function (NotificationChannelType) {
+    NotificationChannelType["SLACK"] = "slack";
+    NotificationChannelType["DISCORD"] = "discord";
+    NotificationChannelType["TEAMS"] = "teams";
+    NotificationChannelType["GOOGLE_CHAT"] = "google_chat";
+    NotificationChannelType["WEBHOOK"] = "webhook";
+    NotificationChannelType["EMAIL"] = "email";
+    NotificationChannelType["PAGERDUTY"] = "pagerduty";
+})(NotificationChannelType || (exports.NotificationChannelType = NotificationChannelType = {}));
 
 
 /***/ }),

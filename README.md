@@ -1,57 +1,60 @@
-# End-of-Life GitHub Action
+# EOL GitHub Action
 
 [![CI](https://github.com/broadsage/endoflife-action/workflows/CI/badge.svg)](https://github.com/broadsage/endoflife-action/actions)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![GitHub release](https://img.shields.io/github/release/broadsage/endoflife-action.svg)](https://github.com/broadsage/endoflife-action/releases)
-[![Marketplace](https://img.shields.io/badge/GitHub-Marketplace-blue)](https://github.com/marketplace/actions/end-of-life-github-action)
+[![Marketplace](https://img.shields.io/badge/GitHub-Marketplace-blue)](https://github.com/marketplace/actions/broadsage-eol-github-action)
 
-> **Automate software lifecycle tracking with intelligent EOL detection, version matrix generation, and seamless GitHub integration**
+> **Automate software lifecycle tracking with intelligent EOL detection, multi-channel notifications, and seamless CI/CD integration**
 
-Never miss an End-of-Life date again. Automatically track 380+ software products, generate test matrices, and keep your dependencies secure and supported.
+Never miss an End-of-Life date again. Automatically track 380+ software products, send alerts to Slack/Discord/Teams, generate test matrices, and keep your dependencies secure.
 
----
+## ✨ Features
 
-## Why This Action?
-
-- **Track 380+ Products**: Python, Node.js, Ubuntu, PostgreSQL, Kubernetes, and more
-- **Fully Automated**: Schedule checks, auto-create issues, and fail builds on EOL
-- **Matrix Generation**: Auto-generate version matrices for multi-version CI/CD testing
-- **Smart Filtering**: Filter by release date, limit versions, exclude EOL automatically
-- **Performance**: Built-in caching, type-safe, production-ready
-- **Multiple Outputs**: JSON, Markdown, GitHub Step Summary, Version Matrices
+- 🔍 **Track 380+ Products** - Python, Node.js, Ubuntu, PostgreSQL, Kubernetes, and more
+- 📢 **Multi-Channel Notifications** - Slack, Discord, Teams, Google Chat, custom webhooks
+- 🤖 **Fully Automated** - Schedule checks, auto-create issues, fail builds on EOL
+- 📊 **Matrix Generation** - Auto-generate version matrices for multi-version CI/CD testing
+- 🎯 **Version Extraction** - Extract versions from package.json, Dockerfile, Helm charts, etc.
+- 📅 **Smart Filtering** - Filter by release date, limit versions, exclude EOL automatically
+- ⚡ **Production Ready** - Built-in caching, type-safe, 87% test coverage
 
 ## 🚀 Quick Start
 
-### 1. Basic EOL Check (30 seconds)
+### Basic EOL Check
 
 ```yaml
-name: Weekly EOL Check
-on:
-  schedule:
-    - cron: '0 0 * * 1'  # Every Monday
-  workflow_dispatch:
-
-jobs:
-  eol-check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: broadsage/endoflife-action@v3
-        with:
-          products: 'python,nodejs,postgresql'
-          fail-on-eol: true
+- uses: broadsage/endoflife-action@v3
+  with:
+    products: 'python,nodejs,postgresql'
+    fail-on-eol: true
 ```
 
-### 2. Auto-Create Issues (1 minute)
+### With Slack Notifications
 
 ```yaml
 - uses: broadsage/endoflife-action@v3
   with:
     products: 'python,nodejs'
+    slack-webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+    notify-on-eol-only: true
+    fail-on-eol: true
+```
+
+### Multi-Channel Notifications
+
+```yaml
+- uses: broadsage/endoflife-action@v3
+  with:
+    products: 'python,nodejs,postgresql'
+    slack-webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+    discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
+    teams-webhook-url: ${{ secrets.TEAMS_WEBHOOK }}
     create-issue-on-eol: true
     github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-### 3. Multi-Version Testing Matrix (2 minutes)
+### Generate Test Matrix
 
 ```yaml
 jobs:
@@ -76,291 +79,183 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.version }}
-      - run: python --version
 ```
-
-**[📚 Read the Full Getting Started Guide →](docs/getting-started.md)**
-
----
-
-## ✨ Key Features
-
-### 🔍 Comprehensive EOL Detection
-
-Monitor any product tracked by [endoflife.date](https://endoflife.date):
-- **Languages**: Python, Node.js, Ruby, Go, Rust, Java, PHP
-- **Databases**: PostgreSQL, MySQL, MongoDB, Redis, Elasticsearch
-- **Operating Systems**: Ubuntu, Debian, Alpine, RHEL, Windows Server
-- **Frameworks**: Django, Rails, Angular, React, Vue.js
-- **And 350+ more...**
-
-### 🎯 Version Extraction
-
-Extract versions automatically from your files:
-
-```yaml
-# From package.json
-- uses: broadsage/endoflife-action@v3
-  with:
-    products: 'nodejs'
-    file-path: 'package.json'
-    file-key: 'engines.node'
-    file-format: 'json'
-
-# From Dockerfile
-- uses: broadsage/endoflife-action@v3
-  with:
-    products: 'python'
-    file-path: 'Dockerfile'
-    version-regex: 'FROM python:([0-9.]+)'
-
-# From Helm values
-- uses: broadsage/endoflife-action@v3
-  with:
-    products: 'postgresql'
-    file-path: 'helm/values.yaml'
-    file-key: 'postgresql.image.tag'
-```
-
-### 🚀 Matrix Generation (NEW in v3)
-
-Generate version matrices for CI/CD testing:
-
-```yaml
-# Simple matrix
-matrix: { "versions": ["3.11", "3.12", "3.13"] }
-
-# Detailed matrix with metadata
-matrix-include: {
-  "include": [
-    {
-      "version": "3.11",
-      "isLts": false,
-      "eolDate": "2027-10-24",
-      "status": "active"
-    }
-  ]
-}
-```
-
-**Perfect for testing across multiple supported versions automatically!**
-
-### 📅 Smart Filtering (NEW in v3)
-
-Filter versions by release date and limit results:
-
-```yaml
-- uses: broadsage/endoflife-action@v3
-  with:
-    products: 'python'
-    min-release-date: '>=2023'    # Only 2023+ versions
-    max-versions: 5                # Latest 5 versions
-    version-sort-order: 'newest-first'
-```
-
-### 🚨 Automated Actions
-
-**Auto-create issues:**
-
-```yaml
-create-issue-on-eol: true
-github-token: ${{ secrets.GITHUB_TOKEN }}
-issue-labels: 'dependencies,security,urgent'
-```
-
-**Fail builds:**
-
-```yaml
-fail-on-eol: true
-fail-on-approaching-eol: true
-eol-threshold-days: 90  # Fail 90 days before EOL
-```
-
-### 📊 Multiple Output Formats
-
-- **GitHub Step Summary** (default): Beautiful in-action reports
-- **Markdown**: For PRs, issues, or documentation
-- **JSON**: For programmatic use or artifacts
-
----
 
 ## 📖 Documentation
 
-- **[📚 Getting Started Guide](docs/getting-started.md)** - 5-minute setup
-- **[📝 Examples](examples/)** - Real-world workflows
-- **[🤝 Contributing](CONTRIBUTING.md)** - How to contribute
-- **[🔒 Security](SECURITY.md)** - Security policy
+### Inputs
 
----
-
-## 💡 Use Cases
-
-### Monitor Production Dependencies
-
-```yaml
-on:
-  schedule:
-    - cron: '0 0 * * 1'
-
-jobs:
-  eol-check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: broadsage/endoflife-action@v3
-        with:
-          products: 'python,nodejs,postgresql,redis'
-          fail-on-eol: true
-          create-issue-on-eol: true
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-```
-
-### Block PRs with EOL Dependencies
-
-```yaml
-on: [pull_request]
-
-jobs:
-  check-eol:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: broadsage/endoflife-action@v3
-        with:
-          products: 'python,nodejs'
-          file-path: 'requirements.txt'  # or package.json
-          fail-on-eol: true
-          fail-on-approaching-eol: true
-```
-
-### Test Across All Supported Versions
-
-```yaml
-jobs:
-  get-python-versions:
-    outputs:
-      matrix: ${{ steps.eol.outputs.matrix }}
-    steps:
-      - uses: broadsage/endoflife-action@v3
-        id: eol
-        with:
-          products: 'python'
-          output-matrix: true
-          min-release-date: '>=2022'
-          max-versions: 5
-  
-  test:
-    needs: get-python-versions
-    strategy:
-      matrix: ${{ fromJson(needs.get-python-versions.outputs.matrix) }}
-    steps:
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.version }}
-      - run: pytest
-```
-
-### Generate EOL Reports
-
-```yaml
-- uses: broadsage/endoflife-action@v3
-  with:
-    products: 'python,nodejs,postgresql'
-    output-format: 'markdown'
-    output-file: 'eol-report.md'
-
-- uses: actions/upload-artifact@v4
-  with:
-    name: eol-report
-    path: eol-report.md
-```
-
----
-
-## 🎨 Example Output
-
-### GitHub Step Summary
-
-```markdown
-# 📊 EndOfLife Analysis Report
-
-**Total Products Checked:** 3
-**Total Cycles Checked:** 5
-
-## ❌ End-of-Life Detected
-
-| Product | Cycle | EOL Date   | Latest Version | LTS |
-|---------|-------|------------|----------------|-----|
-| python  | 2.7   | 2020-01-01 | 2.7.18         | ✗ |
-
-## ⚠️ Approaching End-of-Life
-
-| Product | Cycle | Days Until EOL | EOL Date   | Latest Version | LTS |
-|---------|-------|----------------|------------|----------------|-----|
-| python  | 3.9   | 45             | 2025-10-05 | 3.9.18         | ✗   |
-
-## ✅ Active Support
-
-| Product | Cycle | EOL Date   | Latest Version | LTS |
-|---------|-------|------------|----------------|-----|
-| python  | 3.11  | 2027-10-24 | 3.11.7         | ✗   |
-| python  | 3.12  | 2028-10-02 | 3.12.1         | ✗   |
-| nodejs  | 20    | 2026-04-30 | 20.10.0        | ✓   |
-```
-
----
-
-## 🔧 Configuration
-
-### Essential Inputs
+<details>
+<summary><b>Core Settings</b></summary>
 
 | Input | Description | Default |
 |-------|-------------|---------|
-| `products` | Comma-separated products (required) | - |
+| `products` | Comma-separated list of products (e.g., "python,nodejs") | **Required** |
+| `cycles` | JSON object mapping products to specific cycles | `{}` |
 | `fail-on-eol` | Fail workflow if EOL detected | `false` |
-| `output-matrix` | Generate version matrix | `false` |
-| `github-token` | Token for creating issues | `''` |
+| `fail-on-approaching-eol` | Fail if version approaching EOL | `false` |
+| `eol-threshold-days` | Days before EOL to trigger warning | `90` |
 
-### Essential Outputs
+</details>
+
+<details>
+<summary><b>Output Settings</b></summary>
+
+| Input | Description | Default |
+|-------|-------------|---------|
+| `output-format` | Format: `json`, `markdown`, or `summary` | `summary` |
+| `output-file` | Path to write output file | `''` |
+| `output-matrix` | Generate version matrix for testing | `false` |
+| `exclude-eol-from-matrix` | Exclude EOL versions from matrix | `true` |
+| `exclude-approaching-eol-from-matrix` | Exclude approaching EOL from matrix | `false` |
+
+</details>
+
+<details>
+<summary><b>Version Extraction</b></summary>
+
+| Input | Description | Default |
+|-------|-------------|---------|
+| `file-path` | Path to file containing version info | `''` |
+| `file-key` | Nested key path for YAML/JSON extraction | `''` |
+| `file-format` | File format: `yaml`, `json`, or `text` | `yaml` |
+| `version-regex` | Regex to extract version from file | `''` |
+| `version` | Manually specify version | `''` |
+
+</details>
+
+<details>
+<summary><b>Filtering & Sorting</b></summary>
+
+| Input | Description | Default |
+|-------|-------------|---------|
+| `min-release-date` | Minimum release date (YYYY-MM-DD or YYYY) | `''` |
+| `max-release-date` | Maximum release date (YYYY-MM-DD or YYYY) | `''` |
+| `max-versions` | Maximum number of versions to check | `''` |
+| `version-sort-order` | Sort order: `newest-first` or `oldest-first` | `newest-first` |
+
+</details>
+
+<details>
+<summary><b>GitHub Integration</b></summary>
+
+| Input | Description | Default |
+|-------|-------------|---------|
+| `github-token` | GitHub token for creating issues | `''` |
+| `create-issue-on-eol` | Create GitHub issue when EOL detected | `false` |
+| `issue-labels` | Comma-separated labels for issues | `dependencies,eol,security` |
+
+</details>
+
+<details>
+<summary><b>Notification Settings</b></summary>
+
+| Input | Description | Default |
+|-------|-------------|---------|
+| `slack-webhook-url` | Slack webhook URL | `''` |
+| `discord-webhook-url` | Discord webhook URL | `''` |
+| `teams-webhook-url` | Microsoft Teams webhook URL | `''` |
+| `google-chat-webhook-url` | Google Chat webhook URL | `''` |
+| `custom-webhook-url` | Custom webhook URL (JSON payload) | `''` |
+| `custom-webhook-headers` | Custom headers (JSON format) | `''` |
+| `notify-on-eol-only` | Only notify when EOL detected | `false` |
+| `notify-on-approaching-eol` | Notify for approaching EOL | `true` |
+| `notification-threshold-days` | Days before EOL to notify | `90` |
+| `notification-retry-attempts` | Retry attempts for notifications | `3` |
+
+</details>
+
+### Outputs
 
 | Output | Description |
 |--------|-------------|
-| `eol-detected` | Boolean: EOL versions detected |
-| `matrix` | Version matrix for testing |
+| `eol-detected` | Boolean indicating if EOL versions detected |
+| `approaching-eol` | Boolean indicating if versions approaching EOL |
+| `results` | JSON string containing all version information |
+| `eol-products` | JSON array of EOL products |
+| `approaching-eol-products` | JSON array of products approaching EOL |
+| `latest-versions` | JSON object mapping products to latest versions |
 | `summary` | Human-readable summary |
+| `matrix` | Version matrix for GitHub Actions |
 
----
+## 📚 Examples & Guides
 
-## 🆚 Comparison
+- **[Examples Directory](examples/)** - Complete workflow examples for all features
+  - [Slack Notifications](examples/slack-notifications.yml)
+  - [Discord Notifications](examples/discord-notifications.yml)
+  - [Multi-Channel Setup](examples/multi-channel-notifications.yml)
+  - [Custom Webhooks](examples/custom-webhook.yml)
+  - [Matrix Generation](examples/matrix-generation.yml)
+  - [Version Extraction](examples/extract-from-file.yml)
 
-### vs. Manual Tracking
+- **[Advanced Usage Guide](docs/ADVANCED-USAGE.md)** - Detailed configuration and patterns
+- **[Supported Products](https://endoflife.date/api)** - Full list of 380+ trackable products
 
-| Task | Manual | With This Action |
-|------|--------|------------------|
-| Check EOL status | Hours | Seconds |
-| Update version list | Manual | Automatic |
-| Create issues | Manual | Automatic |
-| Multi-version testing | Manual matrix | Auto-generated |
+## 🔔 Notification Setup
 
-### vs. Other Actions
+<details>
+<summary><b>Slack</b></summary>
 
-- **✅ Most Comprehensive**: 380+ products vs. limited coverage
-- **✅ Matrix Generation**: Auto-generate test matrices
-- **✅ Version Extraction**: From package.json, Dockerfile, etc.
-- **✅ Smart Filtering**: Date-based, limit versions
-- **✅ GitHub Integration**: Auto-create issues and PRs
+1. Create webhook: https://api.slack.com/messaging/webhooks
+2. Add to secrets: `SLACK_WEBHOOK`
+3. Use in workflow:
+```yaml
+slack-webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+```
 
----
+</details>
 
-## 🏆 Success Stories
+<details>
+<summary><b>Discord</b></summary>
 
-> "Reduced EOL tracking overhead by 90%. The auto-generated matrices saved us countless hours."  
-> — *DevOps Team at Fortune 500 Company*
+1. Server Settings → Integrations → Webhooks → New Webhook
+2. Add to secrets: `DISCORD_WEBHOOK`
+3. Use in workflow:
+```yaml
+discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
+```
 
-> "Caught an EOL database version before deployment. Invaluable for compliance."  
-> — *Security Engineer*
+</details>
 
----
+<details>
+<summary><b>Microsoft Teams</b></summary>
+
+1. Channel → Connectors → Incoming Webhook
+2. Add to secrets: `TEAMS_WEBHOOK`
+3. Use in workflow:
+```yaml
+teams-webhook-url: ${{ secrets.TEAMS_WEBHOOK }}
+```
+
+</details>
+
+<details>
+<summary><b>Custom Webhook</b></summary>
+
+Receives standardized JSON payload:
+```json
+{
+  "event": "eol_check_completed",
+  "severity": "error",
+  "title": "🚨 End-of-Life Detected",
+  "summary": "2 version(s) have reached end-of-life",
+  "repository": "owner/repo",
+  "runUrl": "https://github.com/owner/repo/actions/runs/123"
+}
+```
+
+</details>
+
+## 🏆 Why Choose This Action?
+
+| Feature | This Action | Others |
+|---------|------------|--------|
+| Products Supported | **380+** | 5-50 |
+| Notifications | **5 channels** | 0-3 |
+| Version Extraction | ✅ | ❌ |
+| Matrix Generation | ✅ | ❌ |
+| Test Coverage | **87%** | Unknown |
+| Active Maintenance | ✅ | Varies |
 
 ## 🤝 Contributing
 
@@ -368,43 +263,16 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 - Development setup
 - Code style guidelines
 - Testing requirements
-- Contribution workflow
+- Pull request process
 
----
+## 📄 License
 
-## 📝 License
-
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file fordetails.
-
----
+Apache License 2.0 - see [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
 - [endoflife.date](https://endoflife.date) for the comprehensive EOL API
-- GitHub Actions team for the platform
-- Our contributors and users
-
----
-
-## 📞 Support
-
-- **🐛 Found a bug?** [Open an issue](../../issues)
-- **💡 Have an idea?** [Start a discussion](../../discussions)
-- **📧 Need help?** Check [Getting Started](docs/GETTING_STARTED.md)
-
----
-
-## 🗺️ Roadmap
-
-- [x] Basic EOL checking
-- [x] Version extraction from files
-- [x] GitHub issue creation
-- [x] Matrix generation (v3.0)
-- [x] Date filtering (v3.0)
-- [ ] Slack/Teams notifications
-- [ ] Custom EOL policies
-- [ ] Historical tracking
-- [ ] Dependency graph analysis
+- All our contributors and users
 
 ---
 

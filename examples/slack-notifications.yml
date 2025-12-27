@@ -1,0 +1,26 @@
+name: EOL Check with Slack Notifications
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 9 AM
+  workflow_dispatch:
+
+jobs:
+  eol-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check EOL Status
+        uses: broadsage/endoflife-action@v3
+        with:
+          # Products to track
+          products: 'python,nodejs,postgresql'
+          
+          # Slack notification
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          
+          # Notification settings
+          notify-on-eol-only: true
+          notification-retry-attempts: 3
+          
+          # Fail on EOL
+          fail-on-eol: true

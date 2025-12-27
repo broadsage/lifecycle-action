@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: 2025 Broadsage
 
-name: 'EOL GitHub Action'
-description: 'Identifies the End-of-life (EoL) dates for products, using the endoflife.date API'
+name: 'Broadsage EOL GitHub Action'
+description: 'Track 380+ software EOL dates with Slack/Discord/Teams notifications, auto-generate test matrices, and prevent EOL deployments'
 author: 'Broadsage'
 
 branding:
@@ -148,6 +148,72 @@ inputs:
     description: 'Sort order for versions: newest-first or oldest-first'
     required: false
     default: 'newest-first'
+  
+  # Notification Settings
+  enable-notifications:
+    description: 'Enable notifications (auto-enabled if any webhook URL is provided)'
+    required: false
+    default: 'false'
+  
+  slack-webhook-url:
+    description: 'Slack webhook URL for EOL notifications'
+    required: false
+    default: ''
+  
+  discord-webhook-url:
+    description: 'Discord webhook URL for EOL notifications'
+    required: false
+    default: ''
+  
+  teams-webhook-url:
+    description: 'Microsoft Teams webhook URL for EOL notifications'
+    required: false
+    default: ''
+  
+  google-chat-webhook-url:
+    description: 'Google Chat webhook URL for EOL notifications'
+    required: false
+    default: ''
+  
+  custom-webhook-url:
+    description: 'Custom webhook URL for EOL notifications (receives JSON payload)'
+    required: false
+    default: ''
+  
+  custom-webhook-headers:
+    description: 'Custom headers for webhook (JSON format, e.g., {"Authorization": "Bearer token"})'
+    required: false
+    default: ''
+  
+  notify-on-eol-only:
+    description: 'Only send notifications when EOL is detected (not for approaching EOL)'
+    required: false
+    default: 'false'
+  
+  notify-on-approaching-eol:
+    description: 'Send notifications for versions approaching EOL'
+    required: false
+    default: 'true'
+  
+  notification-threshold-days:
+    description: 'Days before EOL to trigger notifications (separate from fail threshold)'
+    required: false
+    default: '90'
+  
+  notification-min-severity:
+    description: 'Minimum severity for notifications: info, warning, error, critical'
+    required: false
+    default: 'info'
+  
+  notification-retry-attempts:
+    description: 'Number of retry attempts for failed notifications'
+    required: false
+    default: '3'
+  
+  notification-retry-delay-ms:
+    description: 'Delay in milliseconds between notification retries'
+    required: false
+    default: '1000'
 
 outputs:
   eol-detected:

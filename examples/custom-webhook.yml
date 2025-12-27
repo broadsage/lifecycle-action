@@ -1,0 +1,43 @@
+name: EOL Check with Custom Webhook
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch:
+
+jobs:
+  eol-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check EOL Status
+        uses: broadsage/endoflife-action@v3
+        with:
+          # Products to track
+          products: 'kubernetes,docker,terraform'
+          
+          # Custom webhook with authentication
+          custom-webhook-url: 'https://your-api.com/webhooks/eol'
+          custom-webhook-headers: '{"Authorization": "Bearer ${{ secrets.API_TOKEN }}", "X-Custom-Header": "value"}'
+          
+          # Notification settings
+          notify-on-eol-only: true
+          notification-retry-attempts: 3
+
+# Custom webhook receives this JSON payload:
+# {
+#   "event": "eol_check_completed",
+#   "timestamp": "2025-01-15T10:30:00Z",
+#   "repository": "owner/repo",
+#   "severity": "error",
+#   "title": "🚨 End-of-Life Detected",
+#   "summary": "2 version(s) have reached end-of-life",
+#   "fields": [
+#     {"name": "Products Checked", "value": "3", "inline": true},
+#     {"name": "EOL Versions", "value": "2", "inline": true}
+#   ],
+#   "runUrl": "https://github.com/owner/repo/actions/runs/123",
+#   "metadata": {
+#     "action": "broadsage-eol-action",
+#     "version": "3.0.0"
+#   }
+# }

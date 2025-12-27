@@ -1,0 +1,41 @@
+name: EOL Check with Multiple Notification Channels
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 9 AM
+  workflow_dispatch:
+
+jobs:
+  eol-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check EOL Status with Multi-Channel Notifications
+        uses: broadsage/endoflife-action@v3
+        with:
+          # Products to track
+          products: 'python,nodejs,postgresql,redis,nginx'
+          
+          # Multiple notification channels
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
+          teams-webhook-url: ${{ secrets.TEAMS_WEBHOOK }}
+          google-chat-webhook-url: ${{ secrets.GOOGLE_CHAT_WEBHOOK }}
+          
+          # Notification settings
+          notify-on-eol-only: false
+          notify-on-approaching-eol: true
+          notification-threshold-days: 90
+          notification-retry-attempts: 5
+          notification-retry-delay-ms: 2000
+          
+          # GitHub issue integration
+          create-issue-on-eol: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          issue-labels: 'dependencies,eol,security,urgent'
+          
+          # Failure settings
+          fail-on-eol: true
+          fail-on-approaching-eol: false
+          eol-threshold-days: 90

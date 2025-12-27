@@ -23,6 +23,11 @@ import {
   generateMatrix,
   generateMatrixInclude,
 } from './outputs';
+import {
+  NotificationManager,
+  NotificationChannelFactory,
+  getNotificationConfig,
+} from './notifications';
 
 /**
  * Main action entry point
@@ -192,6 +197,34 @@ async function run(): Promise<void> {
       } else {
         core.warning('Failed to create or update issue');
       }
+    }
+
+    // Send notifications to configured channels
+    try {
+      const notificationConfig = getNotificationConfig();
+      if (notificationConfig.enabled) {
+        core.info('Sending notifications to configured channels...');
+        const notificationManager = new NotificationManager(notificationConfig);
+
+        // Add all configured channels
+        const channels = NotificationChannelFactory.createFromInputs();
+        channels.forEach((channel) => notificationManager.addChannel(channel));
+
+        if (notificationManager.getChannelCount() > 0) {
+          const notificationResults = await notificationManager.sendAll(results);
+          const successful = notificationResults.filter((r) => r.success).length;
+          core.info(
+            `Notifications sent: ${successful}/${notificationResults.length} successful`
+          );
+        } else {
+          core.debug('No notification channels configured');
+        }
+      }
+    } catch (error) {
+      // Don't fail the action if notifications fail
+      core.warning(
+        `Failed to send notifications: ${getErrorMessage(error)}`
+      );
     }
 
     // Log cache statistics

@@ -1,0 +1,26 @@
+name: Teams Notification for .NET Projects
+
+on:
+  schedule:
+    - cron: '0 10 * * 1'  # Every Monday at 10 AM
+  workflow_dispatch:
+
+jobs:
+  eol-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check .NET EOL Status
+        uses: broadsage/endoflife-action@v3
+        with:
+          # .NET related products
+          products: 'dotnet,windows,sql-server,azure-devops-server'
+          
+          # Microsoft Teams notification
+          teams-webhook-url: ${{ secrets.TEAMS_WEBHOOK }}
+          
+          # Notification settings
+          notify-on-approaching-eol: true
+          notification-threshold-days: 180  # 6 months warning
+          
+          # Fail on EOL
+          fail-on-eol: true
