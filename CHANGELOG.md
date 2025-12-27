@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.0.2](https://github.com/broadsage/endoflife-action/compare/endoflife-action-v2.0.1...endoflife-action-v2.0.2) (2025-12-27)
+
+
+### Code Refactoring
+
+* eliminate workflow duplication and improve consistency ([5ee8458](https://github.com/broadsage/endoflife-action/commit/5ee8458dc4f21a8737cd0fca8ee2a572a4a14096))
+* improve action structure and documentation ([18bc8b9](https://github.com/broadsage/endoflife-action/commit/18bc8b9a6ab762afb90530daba71c28f4b1bb28b))
+
 ## [2.0.1](https://github.com/broadsage/endoflife-action/compare/endoflife-action-v2.0.0...endoflife-action-v2.0.1) (2025-12-26)
 
 
