@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.0.1](https://github.com/broadsage/endoflife-action/compare/v3.0.0...v3.0.1) (2025-12-29)
+
+
+### Miscellaneous
+
+* **deps:** migrate config renovate.json ([3749e25](https://github.com/broadsage/endoflife-action/commit/3749e25d4a37f051e330e7fc2e8219f921eae9fe))
+* **deps:** migrate Renovate config ([c80665c](https://github.com/broadsage/endoflife-action/commit/c80665c715e2a532d17e17656473c77de0456b52))
+
 ## [3.0.0](https://github.com/broadsage/endoflife-action/compare/v2.0.3...v3.0.0) (2025-12-27)
 
 

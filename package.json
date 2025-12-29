@@ -1,6 +1,6 @@
 {
   "name": "endoflife-action",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "GitHub Action to track software versions and End-of-Life dates using endoflife.date API",
   "main": "dist/index.js",
   "scripts": {
