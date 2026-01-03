@@ -1,5 +1,32 @@
 # Changelog
 
+## [3.1.0](https://github.com/broadsage/endoflife-action/compare/v3.0.1...v3.1.0) (2026-01-03)
+
+
+### Features
+
+* add latest changes to dist ([c43f5a1](https://github.com/broadsage/endoflife-action/commit/c43f5a18d809205fc644c81d1b51df9e4814f59d))
+* add multi-channel notification system with Slack, Discord, Teams, Google Chat, and custom webhooks ([3cfc460](https://github.com/broadsage/endoflife-action/commit/3cfc4604f14bc654ca562764b97af861257c8ea1))
+
+
+### Bug Fixes
+
+* code style format ([cbe8719](https://github.com/broadsage/endoflife-action/commit/cbe8719d5969627bf5eae68ef7e5902a73c1230e))
+* resolve ESLint errors in notification factory ([315121e](https://github.com/broadsage/endoflife-action/commit/315121e5b51772586e19a13499250843a87899e6))
+
+
+### Miscellaneous
+
+* **deps:** refresh ([c2df769](https://github.com/broadsage/endoflife-action/commit/c2df769d2bc593d8705f1946ead2f0d98d5cdeda))
+* **deps:** refresh ([c2df769](https://github.com/broadsage/endoflife-action/commit/c2df769d2bc593d8705f1946ead2f0d98d5cdeda))
+* **deps:** refresh ([9355366](https://github.com/broadsage/endoflife-action/commit/935536677e0697dce3c1cc09e3db1f176fbe7f2e))
+* description change in action.yml ([60a74f4](https://github.com/broadsage/endoflife-action/commit/60a74f4cc4f9e4483ca7c3c882c133ed8005a7c7))
+
+
+### Tests
+
+* improve test coverage to 86.52% function coverage ([830d249](https://github.com/broadsage/endoflife-action/commit/830d24964ec05b88387a871def2062a54810c963))
+
 ## [3.0.1](https://github.com/broadsage/endoflife-action/compare/v3.0.0...v3.0.1) (2025-12-29)
 
 
