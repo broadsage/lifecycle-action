@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.0.0](https://github.com/broadsage/endoflife-action/compare/v3.1.0...v4.0.0) (2026-01-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* Migrated from endoflife.date API v0 to API v1. Users with custom-api-url must update to include /api/v1 path.
+
+### Features
+
+* complete v1 API migration with full endpoint coverage and improved test coverage ([4bfcea6](https://github.com/broadsage/endoflife-action/commit/4bfcea6b0b49a788836a01bc22c4a17efcfab467))
+
 ## [Unreleased]
 
 ### ⚠ BREAKING CHANGES
