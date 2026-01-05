@@ -55145,10 +55145,14 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.EolAnalyzer = void 0;
 const date_fns_1 = __nccwpck_require__(72812);
 const core = __importStar(__nccwpck_require__(37484));
+const p_limit_1 = __importDefault(__nccwpck_require__(70370));
 const error_utils_1 = __nccwpck_require__(82483);
 const types_1 = __nccwpck_require__(38522);
 /**
@@ -55411,11 +55415,16 @@ class EolAnalyzer {
         }
     }
     /**
-     * Analyze multiple products
+     * Analyze multiple products with parallel processing
+     * Uses concurrency control to respect API rate limits while maximizing performance
      */
-    async analyzeProducts(products, cyclesMap, versionMap, semanticFallback = true, minReleaseDate, maxReleaseDate, maxVersions, versionSortOrder = 'newest-first') {
-        const allResults = [];
-        for (const product of products) {
+    async analyzeProducts(products, cyclesMap, versionMap, semanticFallback = true, minReleaseDate, maxReleaseDate, maxVersions, versionSortOrder = 'newest-first', concurrency = 5 // Max concurrent API requests
+    ) {
+        core.info(`Analyzing ${products.length} product(s) with concurrency limit of ${concurrency}`);
+        // Create concurrency limiter
+        const limit = (0, p_limit_1.default)(concurrency);
+        // Create parallel tasks for each product
+        const tasks = products.map((product) => limit(async () => {
             try {
                 // Check if specific version is provided for this product
                 const specificVersion = versionMap?.get(product);
@@ -55425,23 +55434,32 @@ class EolAnalyzer {
                     const cycleInfo = await this.client.getCycleInfoWithFallback(product, specificVersion, semanticFallback);
                     if (cycleInfo) {
                         const analyzed = this.analyzeProductCycle(product, cycleInfo);
-                        allResults.push(analyzed);
+                        return [analyzed];
                     }
                     else {
                         core.warning(`No cycle information found for ${product} version ${specificVersion}`);
+                        return [];
                     }
                 }
                 else {
                     // Multi-cycle mode - existing logic
                     const specificCycles = cyclesMap?.[product];
                     const results = await this.analyzeProduct(product, specificCycles, minReleaseDate, maxReleaseDate, maxVersions, versionSortOrder);
-                    allResults.push(...results);
+                    return results;
                 }
             }
             catch (error) {
                 core.warning(`Skipping product ${product} due to error: ${(0, error_utils_1.getErrorMessage)(error)}`);
+                return [];
             }
-        }
+        }));
+        // Execute all tasks in parallel (with concurrency limit)
+        const startTime = Date.now();
+        const results = await Promise.all(tasks);
+        const duration = Date.now() - startTime;
+        // Flatten results
+        const allResults = results.flat();
+        core.info(`Analyzed ${allResults.length} cycle(s) across ${products.length} product(s) in ${duration}ms`);
         const eolProducts = allResults.filter((r) => r.status === types_1.EolStatus.END_OF_LIFE);
         const approachingEolProducts = allResults.filter((r) => r.status === types_1.EolStatus.APPROACHING_EOL);
         const staleProducts = allResults.filter((r) => r.daysSinceLatestRelease !== null &&
@@ -64748,6 +64766,222 @@ exports.coerce = {
 exports.NEVER = parseUtil_js_1.INVALID;
 
 
+/***/ }),
+
+/***/ 70370:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+"use strict";
+// ESM COMPAT FLAG
+__nccwpck_require__.r(__webpack_exports__);
+
+// EXPORTS
+__nccwpck_require__.d(__webpack_exports__, {
+  "default": () => (/* binding */ pLimit),
+  limitFunction: () => (/* binding */ limitFunction)
+});
+
+;// CONCATENATED MODULE: ./node_modules/yocto-queue/index.js
+/*
+How it works:
+`this.#head` is an instance of `Node` which keeps track of its current value and nests another instance of `Node` that keeps the value that comes after it. When a value is provided to `.enqueue()`, the code needs to iterate through `this.#head`, going deeper and deeper to find the last value. However, iterating through every single item is slow. This problem is solved by saving a reference to the last value as `this.#tail` so that it can reference it to add a new value.
+*/
+
+class Node {
+	value;
+	next;
+
+	constructor(value) {
+		this.value = value;
+	}
+}
+
+class Queue {
+	#head;
+	#tail;
+	#size;
+
+	constructor() {
+		this.clear();
+	}
+
+	enqueue(value) {
+		const node = new Node(value);
+
+		if (this.#head) {
+			this.#tail.next = node;
+			this.#tail = node;
+		} else {
+			this.#head = node;
+			this.#tail = node;
+		}
+
+		this.#size++;
+	}
+
+	dequeue() {
+		const current = this.#head;
+		if (!current) {
+			return;
+		}
+
+		this.#head = this.#head.next;
+		this.#size--;
+
+		// Clean up tail reference when queue becomes empty
+		if (!this.#head) {
+			this.#tail = undefined;
+		}
+
+		return current.value;
+	}
+
+	peek() {
+		if (!this.#head) {
+			return;
+		}
+
+		return this.#head.value;
+
+		// TODO: Node.js 18.
+		// return this.#head?.value;
+	}
+
+	clear() {
+		this.#head = undefined;
+		this.#tail = undefined;
+		this.#size = 0;
+	}
+
+	get size() {
+		return this.#size;
+	}
+
+	* [Symbol.iterator]() {
+		let current = this.#head;
+
+		while (current) {
+			yield current.value;
+			current = current.next;
+		}
+	}
+
+	* drain() {
+		while (this.#head) {
+			yield this.dequeue();
+		}
+	}
+}
+
+;// CONCATENATED MODULE: ./node_modules/p-limit/index.js
+
+
+function pLimit(concurrency) {
+	validateConcurrency(concurrency);
+
+	const queue = new Queue();
+	let activeCount = 0;
+
+	const resumeNext = () => {
+		// Process the next queued function if we're under the concurrency limit
+		if (activeCount < concurrency && queue.size > 0) {
+			activeCount++;
+			queue.dequeue()();
+		}
+	};
+
+	const next = () => {
+		activeCount--;
+		resumeNext();
+	};
+
+	const run = async (function_, resolve, arguments_) => {
+		// Execute the function and capture the result promise
+		const result = (async () => function_(...arguments_))();
+
+		// Resolve immediately with the promise (don't wait for completion)
+		resolve(result);
+
+		// Wait for the function to complete (success or failure)
+		// We catch errors here to prevent unhandled rejections,
+		// but the original promise rejection is preserved for the caller
+		try {
+			await result;
+		} catch {}
+
+		// Decrement active count and process next queued function
+		next();
+	};
+
+	const enqueue = (function_, resolve, arguments_) => {
+		// Queue the internal resolve function instead of the run function
+		// to preserve the asynchronous execution context.
+		new Promise(internalResolve => { // eslint-disable-line promise/param-names
+			queue.enqueue(internalResolve);
+		}).then(run.bind(undefined, function_, resolve, arguments_)); // eslint-disable-line promise/prefer-await-to-then
+
+		// Start processing immediately if we haven't reached the concurrency limit
+		if (activeCount < concurrency) {
+			resumeNext();
+		}
+	};
+
+	const generator = (function_, ...arguments_) => new Promise(resolve => {
+		enqueue(function_, resolve, arguments_);
+	});
+
+	Object.defineProperties(generator, {
+		activeCount: {
+			get: () => activeCount,
+		},
+		pendingCount: {
+			get: () => queue.size,
+		},
+		clearQueue: {
+			value() {
+				queue.clear();
+			},
+		},
+		concurrency: {
+			get: () => concurrency,
+
+			set(newConcurrency) {
+				validateConcurrency(newConcurrency);
+				concurrency = newConcurrency;
+
+				queueMicrotask(() => {
+					// eslint-disable-next-line no-unmodified-loop-condition
+					while (activeCount < concurrency && queue.size > 0) {
+						resumeNext();
+					}
+				});
+			},
+		},
+		map: {
+			async value(iterable, function_) {
+				const promises = Array.from(iterable, (value, index) => this(function_, value, index));
+				return Promise.all(promises);
+			},
+		},
+	});
+
+	return generator;
+}
+
+function limitFunction(function_, options) {
+	const {concurrency} = options;
+	const limit = pLimit(concurrency);
+
+	return (...arguments_) => limit(() => function_(...arguments_));
+}
+
+function validateConcurrency(concurrency) {
+	if (!((Number.isInteger(concurrency) || concurrency === Number.POSITIVE_INFINITY) && concurrency > 0)) {
+		throw new TypeError('Expected `concurrency` to be a number from 1 and up');
+	}
+}
+
+
 /***/ })
 
 /******/ 	});
@@ -64783,6 +65017,34 @@ exports.NEVER = parseUtil_js_1.INVALID;
 /******/ 	}
 /******/ 	
 /************************************************************************/
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__nccwpck_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__nccwpck_require__.o(definition, key) && !__nccwpck_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__nccwpck_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__nccwpck_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
 /******/ 	if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = __dirname + "/";

@@ -141,6 +141,12 @@ inputs:
     required: false
     default: 'true'
   
+  # Performance
+  api-concurrency:
+    description: 'Maximum number of concurrent API requests (1-10, default: 5)'
+    required: false
+    default: '5'
+  
   output-matrix:
     description: 'Enable matrix output generation for GitHub Actions matrix strategies'
     required: false

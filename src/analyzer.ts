@@ -3,6 +3,7 @@
 
 import { differenceInDays, parseISO, isValid } from 'date-fns';
 import * as core from '@actions/core';
+import pLimit from 'p-limit';
 import { getErrorMessage } from './utils/error-utils';
 import {
   Cycle,
@@ -20,7 +21,7 @@ export class EolAnalyzer {
   constructor(
     private client: EndOfLifeClient,
     private eolThresholdDays: number
-  ) {}
+  ) { }
 
   /**
    * Parse EOL date from various formats
@@ -307,7 +308,8 @@ export class EolAnalyzer {
   }
 
   /**
-   * Analyze multiple products
+   * Analyze multiple products with parallel processing
+   * Uses concurrency control to respect API rate limits while maximizing performance
    */
   async analyzeProducts(
     products: string[],
@@ -317,52 +319,75 @@ export class EolAnalyzer {
     minReleaseDate?: Date,
     maxReleaseDate?: Date,
     maxVersions?: number | null,
-    versionSortOrder: 'newest-first' | 'oldest-first' = 'newest-first'
+    versionSortOrder: 'newest-first' | 'oldest-first' = 'newest-first',
+    concurrency = 5 // Max concurrent API requests
   ): Promise<ActionResults> {
-    const allResults: ProductVersionInfo[] = [];
+    core.info(
+      `Analyzing ${products.length} product(s) with concurrency limit of ${concurrency}`
+    );
 
-    for (const product of products) {
-      try {
-        // Check if specific version is provided for this product
-        const specificVersion = versionMap?.get(product);
+    // Create concurrency limiter
+    const limit = pLimit(concurrency);
 
-        if (specificVersion) {
-          // Single version mode - check only this version
-          core.info(`Analyzing ${product} version ${specificVersion}`);
+    // Create parallel tasks for each product
+    const tasks = products.map((product) =>
+      limit(async () => {
+        try {
+          // Check if specific version is provided for this product
+          const specificVersion = versionMap?.get(product);
 
-          const cycleInfo = await this.client.getCycleInfoWithFallback(
-            product,
-            specificVersion,
-            semanticFallback
-          );
+          if (specificVersion) {
+            // Single version mode - check only this version
+            core.info(`Analyzing ${product} version ${specificVersion}`);
 
-          if (cycleInfo) {
-            const analyzed = this.analyzeProductCycle(product, cycleInfo);
-            allResults.push(analyzed);
-          } else {
-            core.warning(
-              `No cycle information found for ${product} version ${specificVersion}`
+            const cycleInfo = await this.client.getCycleInfoWithFallback(
+              product,
+              specificVersion,
+              semanticFallback
             );
+
+            if (cycleInfo) {
+              const analyzed = this.analyzeProductCycle(product, cycleInfo);
+              return [analyzed];
+            } else {
+              core.warning(
+                `No cycle information found for ${product} version ${specificVersion}`
+              );
+              return [];
+            }
+          } else {
+            // Multi-cycle mode - existing logic
+            const specificCycles = cyclesMap?.[product];
+            const results = await this.analyzeProduct(
+              product,
+              specificCycles,
+              minReleaseDate,
+              maxReleaseDate,
+              maxVersions,
+              versionSortOrder
+            );
+            return results;
           }
-        } else {
-          // Multi-cycle mode - existing logic
-          const specificCycles = cyclesMap?.[product];
-          const results = await this.analyzeProduct(
-            product,
-            specificCycles,
-            minReleaseDate,
-            maxReleaseDate,
-            maxVersions,
-            versionSortOrder
+        } catch (error) {
+          core.warning(
+            `Skipping product ${product} due to error: ${getErrorMessage(error)}`
           );
-          allResults.push(...results);
+          return [];
         }
-      } catch (error) {
-        core.warning(
-          `Skipping product ${product} due to error: ${getErrorMessage(error)}`
-        );
-      }
-    }
+      })
+    );
+
+    // Execute all tasks in parallel (with concurrency limit)
+    const startTime = Date.now();
+    const results = await Promise.all(tasks);
+    const duration = Date.now() - startTime;
+
+    // Flatten results
+    const allResults: ProductVersionInfo[] = results.flat();
+
+    core.info(
+      `Analyzed ${allResults.length} cycle(s) across ${products.length} product(s) in ${duration}ms`
+    );
 
     const eolProducts = allResults.filter(
       (r) => r.status === EolStatus.END_OF_LIFE
