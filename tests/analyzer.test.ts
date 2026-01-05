@@ -6,6 +6,13 @@ import { EndOfLifeClient } from '../src/client';
 import { EolStatus, Cycle } from '../src/types';
 import nock from 'nock';
 
+// Mock p-limit as it's ESM only and causes issues with Jest
+jest.mock('p-limit', () => {
+    return (_concurrency: number) => {
+        return (fn: any) => fn();
+    };
+});
+
 describe('EolAnalyzer', () => {
     let client: EndOfLifeClient;
     let analyzer: EolAnalyzer;
@@ -122,6 +129,33 @@ describe('EolAnalyzer', () => {
             const result = await analyzer.analyzeProductCycle('nodejs', ltsCycle);
 
             expect(result.isLts).toBe(true);
+        });
+
+        it('should identify discontinued products', async () => {
+            const discontinuedCycle: Cycle = {
+                cycle: '1.0',
+                discontinued: '2020-01-01',
+                latest: '1.0.5',
+            };
+
+            const result = await analyzer.analyzeProductCycle('app', discontinuedCycle);
+
+            expect(result.isDiscontinued).toBe(true);
+            expect(result.discontinuedDate).toMatch(/^(2019-12-31|2020-01-01)$/);
+        });
+
+        it('should calculate days since latest release correctly', async () => {
+            const lastReleaseDate = '2023-01-01';
+            const cycle: Cycle = {
+                cycle: '3.0',
+                latestReleaseDate: lastReleaseDate,
+                latest: '3.0.1',
+            };
+
+            const result = await analyzer.analyzeProductCycle('app', cycle);
+
+            expect(result.latestReleaseDate).toBe(lastReleaseDate);
+            expect(result.daysSinceLatestRelease).toBeGreaterThan(0);
         });
     });
 

@@ -209,6 +209,24 @@ describe('NotificationChannelFactory', () => {
             expect(channels[2]).toBeInstanceOf(TeamsChannel);
         });
 
+        it('should pass retry options to created channels', () => {
+            const options = {
+                retryAttempts: 10,
+                retryDelayMs: 3000,
+            };
+
+            (core.getInput as jest.Mock).mockImplementation((name: string) => {
+                if (name === 'slack-webhook-url') return 'https://hooks.slack.com/test';
+                return '';
+            });
+
+            const channels = NotificationChannelFactory.createFromInputs(options);
+
+            expect(channels).toHaveLength(1);
+            expect((channels[0] as any).retryAttempts).toBe(10);
+            expect((channels[0] as any).retryDelayMs).toBe(3000);
+        });
+
         it('should return empty array when no webhooks configured', () => {
             const channels = NotificationChannelFactory.createFromInputs();
 

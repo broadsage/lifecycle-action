@@ -346,6 +346,34 @@ describe('SBOMParser', () => {
             expect(result.get('python')).toBe('3.11.0');
             expect(result.get('nodejs')).toBe('18.12.0');
         });
+
+        it('should use custom mapping if provided', () => {
+            const sbom = {
+                bomFormat: 'CycloneDX',
+                specVersion: '1.4',
+                components: [
+                    {
+                        name: 'my-custom-python',
+                        version: '3.11.0',
+                    },
+                ],
+            };
+
+            const filePath = path.join(tempDir, 'custom-mapping.json');
+            fs.writeFileSync(filePath, JSON.stringify(sbom));
+
+            const customMapping = {
+                'my-custom-python': 'python',
+            };
+
+            const result = SBOMParser.parseFile(
+                filePath,
+                SBOMFormat.CYCLONEDX,
+                customMapping
+            );
+
+            expect(result.get('python')).toBe('3.11.0');
+        });
     });
 
     describe('Statistics', () => {

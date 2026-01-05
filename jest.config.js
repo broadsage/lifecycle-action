@@ -20,6 +20,9 @@ module.exports = {
             statements: 60,
         },
     },
+    transformIgnorePatterns: [
+        'node_modules/(?!(p-limit|yocto-queue)/)',
+    ],
     coverageDirectory: 'coverage',
     verbose: true,
     testTimeout: 10000,

@@ -162,6 +162,48 @@ describe('Output Formatting', () => {
 
             expect(result).toContain('✓'); // LTS checkmark
         });
+
+        it('should include stale versions section', () => {
+            const staleProduct: ProductVersionInfo = {
+                ...mockProduct,
+                cycle: '3.6',
+                latestReleaseDate: '2018-12-24',
+                daysSinceLatestRelease: 1800,
+            };
+
+            const results: ActionResults = {
+                ...mockResults,
+                staleDetected: true,
+                staleProducts: [staleProduct],
+            };
+
+            const result = formatAsMarkdown(results);
+
+            expect(result).toContain('## ⏰ Stale Versions');
+            expect(result).toContain('3.6');
+            expect(result).toContain('2018-12-24');
+        });
+
+        it('should include discontinued products section', () => {
+            const discontinuedProduct: ProductVersionInfo = {
+                ...mockProduct,
+                cycle: '10.0',
+                isDiscontinued: true,
+                discontinuedDate: '2023-01-01',
+            };
+
+            const results: ActionResults = {
+                ...mockResults,
+                discontinuedDetected: true,
+                discontinuedProducts: [discontinuedProduct],
+            };
+
+            const result = formatAsMarkdown(results);
+
+            expect(result).toContain('## 🚫 Discontinued Products');
+            expect(result).toContain('10.0');
+            expect(result).toContain('2023-01-01');
+        });
     });
 
     describe('createIssueBody', () => {
@@ -224,6 +266,46 @@ describe('Output Formatting', () => {
             const result = createIssueBody(results);
 
             expect(result).not.toContain('**More Info:**');
+        });
+
+        it('should include stale versions information', () => {
+            const staleProduct: ProductVersionInfo = {
+                ...mockProduct,
+                cycle: '3.6',
+                latestReleaseDate: '2018-12-24',
+                daysSinceLatestRelease: 1800,
+            };
+
+            const results: ActionResults = {
+                ...mockResults,
+                staleProducts: [staleProduct],
+            };
+
+            const result = createIssueBody(results);
+
+            expect(result).toContain('## ⏰ Stale Versions');
+            expect(result).toContain('### python 3.6');
+            expect(result).toContain('**Days Since Latest Release:** 1800');
+        });
+
+        it('should include discontinued products information', () => {
+            const discontinuedProduct: ProductVersionInfo = {
+                ...mockProduct,
+                cycle: '10.0',
+                isDiscontinued: true,
+                discontinuedDate: '2023-01-01',
+            };
+
+            const results: ActionResults = {
+                ...mockResults,
+                discontinuedProducts: [discontinuedProduct],
+            };
+
+            const result = createIssueBody(results);
+
+            expect(result).toContain('## 🚫 Discontinued Products');
+            expect(result).toContain('### python 10.0');
+            expect(result).toContain('**Discontinued Date:** 2023-01-01');
         });
     });
 
@@ -412,6 +494,11 @@ describe('Output Formatting', () => {
             expect(core.setOutput).toHaveBeenCalledWith('summary', 'Test summary');
             expect(core.setOutput).toHaveBeenCalledWith('total-products-checked', 1);
             expect(core.setOutput).toHaveBeenCalledWith('total-cycles-checked', 1);
+            expect(core.setOutput).toHaveBeenCalledWith('stale-detected', false);
+            expect(core.setOutput).toHaveBeenCalledWith('stale-products', JSON.stringify([]));
+            expect(core.setOutput).toHaveBeenCalledWith('discontinued-detected', false);
+            expect(core.setOutput).toHaveBeenCalledWith('discontinued-products', JSON.stringify([]));
+            expect(core.setOutput).toHaveBeenCalledWith('extended-support-products', JSON.stringify([]));
         });
 
         it('should set matrix output when provided', () => {

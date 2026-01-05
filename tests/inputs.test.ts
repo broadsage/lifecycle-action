@@ -105,6 +105,21 @@ describe('Input Parsing and Validation', () => {
             const inputs = getInputs();
             expect(inputs.maxVersions).toBe(10);
         });
+
+        it('should parse api-concurrency when provided', () => {
+            mockCore.getInput.mockImplementation((name: string) => {
+                if (name === 'api-concurrency') return '8';
+                return '';
+            });
+
+            const inputs = getInputs();
+            expect(inputs.apiConcurrency).toBe(8);
+        });
+
+        it('should use default api-concurrency when not provided', () => {
+            const inputs = getInputs();
+            expect(inputs.apiConcurrency).toBe(5);
+        });
     });
 
     describe('parseProducts', () => {
@@ -207,6 +222,10 @@ describe('Input Parsing and Validation', () => {
             fileFormat: 'yaml',
             versionRegex: '',
             version: '',
+            sbomFile: '',
+            sbomFormat: 'auto',
+            sbomComponentMapping: '',
+            apiConcurrency: 5,
             semanticVersionFallback: true,
             // Matrix output properties
             outputMatrix: false,
