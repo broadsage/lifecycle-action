@@ -114,7 +114,18 @@ export class EndOfLifeClient {
         );
       }
 
-      const data: unknown = JSON.parse(body);
+      let data: any = JSON.parse(body);
+
+      // Handle v1 API wrapper (result field)
+      if (
+        data &&
+        typeof data === 'object' &&
+        'result' in data &&
+        'schema_version' in data
+      ) {
+        data = data.result;
+      }
+
       const validated = schema.parse(data);
       this.setCache(cacheKey, validated);
 

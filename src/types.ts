@@ -6,7 +6,7 @@ import { z } from 'zod';
 /**
  * Schema for a single release cycle from the EndOfLife.date API
  */
-export const CycleSchema = z.object({
+export const BaseCycleSchema = z.object({
   cycle: z.union([z.string(), z.number()]),
   releaseDate: z.string().optional(),
   eol: z.union([z.string(), z.boolean()]).optional(),
@@ -19,7 +19,24 @@ export const CycleSchema = z.object({
   extendedSupport: z.union([z.string(), z.boolean()]).optional(),
 });
 
-export type Cycle = z.infer<typeof CycleSchema>;
+export type Cycle = z.infer<typeof BaseCycleSchema>;
+
+export const CycleSchema: z.ZodType<Cycle> = z.preprocess((val: any) => {
+  if (typeof val === 'object' && val !== null) {
+    return {
+      ...val,
+      // v1 uses 'name', root API uses 'cycle'
+      cycle: val.cycle ?? val.name,
+      // v1 uses 'eolFrom', root API uses 'eol'
+      eol: val.eol ?? val.eolFrom,
+      // v1 uses 'isLts' (bool) or 'ltsFrom' (date), root API uses 'lts'
+      lts: val.lts ?? val.isLts ?? val.ltsFrom,
+      // v1 uses nested 'latest' object, root API uses string
+      latest: typeof val.latest === 'object' ? val.latest?.name : val.latest,
+    };
+  }
+  return val;
+}, BaseCycleSchema) as any;
 
 /**
  * Schema for the list of all products

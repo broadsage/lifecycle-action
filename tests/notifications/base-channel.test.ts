@@ -9,6 +9,9 @@ import {
 } from '../../src/notifications/types';
 import { ActionResults, EolStatus } from '../../src/types';
 
+// Mock @actions/core to avoid triggering annotations during tests
+jest.mock('@actions/core');
+
 // Mock implementation for testing
 class MockNotificationChannel extends BaseNotificationChannel {
     readonly name = 'Mock Channel';

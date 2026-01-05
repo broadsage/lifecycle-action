@@ -181,9 +181,12 @@ describe('EolAnalyzer', () => {
             nock(baseUrl)
                 .get('/api/v1/products/python')
                 .reply(200, {
-                    name: 'python',
-                    label: 'Python',
-                    releases: mockCycles,
+                    schema_version: '1.2.0',
+                    result: {
+                        name: 'python',
+                        label: 'Python',
+                        releases: mockCycles,
+                    },
                 });
 
             const results = await analyzer.analyzeProduct('python');
@@ -219,9 +222,12 @@ describe('EolAnalyzer', () => {
             nock(baseUrl)
                 .get('/api/v1/products/python')
                 .reply(200, {
-                    name: 'python',
-                    label: 'Python',
-                    releases: mockCycles,
+                    schema_version: '1.2.0',
+                    result: {
+                        name: 'python',
+                        label: 'Python',
+                        releases: mockCycles,
+                    },
                 });
 
             const results = await analyzer.analyzeProduct('python', ['3.11', '3.10']);
@@ -254,17 +260,23 @@ describe('EolAnalyzer', () => {
             nock(baseUrl)
                 .get('/api/v1/products/python')
                 .reply(200, {
-                    name: 'python',
-                    label: 'Python',
-                    releases: pythonCycles,
+                    schema_version: '1.2.0',
+                    result: {
+                        name: 'python',
+                        label: 'Python',
+                        releases: pythonCycles,
+                    },
                 });
 
             nock(baseUrl)
                 .get('/api/v1/products/nodejs')
                 .reply(200, {
-                    name: 'nodejs',
-                    label: 'Node.js',
-                    releases: nodejsCycles,
+                    schema_version: '1.2.0',
+                    result: {
+                        name: 'nodejs',
+                        label: 'Node.js',
+                        releases: nodejsCycles,
+                    },
                 });
 
             const results = await analyzer.analyzeProducts(['python', 'nodejs']);

@@ -28,7 +28,7 @@ describe('EndOfLifeClient', () => {
 
             nock(baseUrl)
                 .get('/api/v1/products')
-                .reply(200, mockProducts);
+                .reply(200, { schema_version: '1.2.0', result: mockProducts });
 
             const products = await client.getAllProducts();
 
@@ -53,7 +53,7 @@ describe('EndOfLifeClient', () => {
             nock(baseUrl)
                 .get('/api/v1/products')
                 .once()
-                .reply(200, mockProducts);
+                .reply(200, { schema_version: '1.2.0', result: mockProducts });
 
             // First request
             const products1 = await client.getAllProducts();
@@ -91,9 +91,12 @@ describe('EndOfLifeClient', () => {
             nock(baseUrl)
                 .get('/api/v1/products/python')
                 .reply(200, {
-                    name: 'python',
-                    label: 'Python',
-                    releases: mockCycles,
+                    schema_version: '1.2.0',
+                    result: {
+                        name: 'python',
+                        label: 'Python',
+                        releases: mockCycles,
+                    },
                 });
 
             const cycles = await client.getProductCycles('python');
@@ -123,9 +126,12 @@ describe('EndOfLifeClient', () => {
             nock(baseUrl)
                 .get('/api/v1/products/python')
                 .reply(200, {
-                    name: 'python',
-                    label: 'Python',
-                    releases: invalidResponse,
+                    schema_version: '1.2.0',
+                    result: {
+                        name: 'python',
+                        label: 'Python',
+                        releases: invalidResponse,
+                    },
                 });
 
             await expect(client.getProductCycles('python')).rejects.toThrow();
@@ -144,7 +150,7 @@ describe('EndOfLifeClient', () => {
 
             nock(baseUrl)
                 .get('/api/v1/products/python/releases/3.11')
-                .reply(200, mockCycle);
+                .reply(200, { schema_version: '1.2.0', result: mockCycle });
 
             const cycle = await client.getProductCycle('python', '3.11');
 
@@ -161,7 +167,7 @@ describe('EndOfLifeClient', () => {
 
             nock(baseUrl)
                 .get('/api/v1/products/freebsd/releases/releng%2F14.0')
-                .reply(200, mockCycle);
+                .reply(200, { schema_version: '1.2.0', result: mockCycle });
 
             const cycle = await client.getProductCycle('freebsd', 'releng/14.0');
 
@@ -185,7 +191,7 @@ describe('EndOfLifeClient', () => {
 
             nock(baseUrl)
                 .get('/api/v1/products')
-                .reply(200, mockProducts);
+                .reply(200, { schema_version: '1.2.0', result: mockProducts });
 
             await client.getAllProducts();
 
@@ -205,7 +211,7 @@ describe('EndOfLifeClient', () => {
             nock(baseUrl)
                 .get('/api/v1/products')
                 .times(2)
-                .reply(200, mockProducts);
+                .reply(200, { schema_version: '1.2.0', result: mockProducts });
 
             // First request
             await shortTtlClient.getAllProducts();
@@ -260,7 +266,7 @@ describe('EndOfLifeClient', () => {
                 .get('/api/v1/products')
                 .reply(429, 'Rate Limited')
                 .get('/api/v1/products')
-                .reply(200, mockProducts);
+                .reply(200, { schema_version: '1.2.0', result: mockProducts });
 
             const products = await client.getAllProducts();
 
@@ -296,7 +302,7 @@ describe('EndOfLifeClient', () => {
                 .reply(404, 'Not Found')
                 // Then try 3.11 - returns success
                 .get('/api/v1/products/python/releases/3.11')
-                .reply(200, mockCycle);
+                .reply(200, { schema_version: '1.2.0', result: mockCycle });
 
             const result = await client.getCycleInfoWithFallback('python', '3.11.7', true);
 
@@ -338,7 +344,7 @@ describe('EndOfLifeClient', () => {
 
             nock(baseUrl)
                 .get('/api/v1/products/python/releases/3.11.7')
-                .reply(200, mockCycle);
+                .reply(200, { schema_version: '1.2.0', result: mockCycle });
 
             const result = await client.getCycleInfoWithFallback('python', '3.11.7', true);
 
@@ -361,7 +367,7 @@ describe('EndOfLifeClient', () => {
 
             nock(baseUrl)
                 .get('/api/v1/identifiers/purl')
-                .reply(200, mockIdentifiers);
+                .reply(200, { schema_version: '1.2.0', result: mockIdentifiers });
 
             const identifiers = await client.getIdentifiersByType('purl');
 
@@ -392,7 +398,7 @@ describe('EndOfLifeClient', () => {
             nock(baseUrl)
                 .get('/api/v1/identifiers/cpe')
                 .once()
-                .reply(200, mockIdentifiers);
+                .reply(200, { schema_version: '1.2.0', result: mockIdentifiers });
 
             // First request
             const identifiers1 = await client.getIdentifiersByType('cpe');
@@ -413,7 +419,7 @@ describe('EndOfLifeClient', () => {
 
             nock(baseUrl)
                 .get('/api/v1/identifiers/purl')
-                .reply(200, invalidResponse);
+                .reply(200, { schema_version: '1.2.0', result: invalidResponse });
 
             await expect(client.getIdentifiersByType('purl')).rejects.toThrow();
         });
