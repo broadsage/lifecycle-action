@@ -11,9 +11,8 @@ import { getErrorMessage } from './utils/error-utils';
 import {
   getInputs,
   parseProducts,
-  parseCycles,
+  parseReleases,
   validateInputs,
-  parseDateFilter,
 } from './inputs';
 import {
   setOutputs,
@@ -43,56 +42,15 @@ async function run(): Promise<void> {
 
     core.debug(`Inputs: ${JSON.stringify(inputs, null, 2)}`);
 
-    // Parse products and cycles
+    // Parse products and releases
     let products = parseProducts(inputs.products);
-    const cyclesMap = parseCycles(inputs.cycles);
+    const releasesMap = parseReleases(inputs.releases);
 
     // Initialize client
     const client = new EndOfLifeClient(inputs.customApiUrl, inputs.cacheTtl);
 
     // Handle "all" products and filtering
-    if (inputs.filterByCategory || inputs.filterByTag) {
-      let allowedProducts: Set<string> | null = null;
-
-      if (inputs.filterByCategory) {
-        core.info(`Filtering products by category: ${inputs.filterByCategory}`);
-        const catProds = await client.getProductsByCategory(
-          inputs.filterByCategory
-        );
-        allowedProducts = new Set(catProds.map((p) => p.name));
-      }
-
-      if (inputs.filterByTag) {
-        core.info(`Filtering products by tag: ${inputs.filterByTag}`);
-        const tagProds = await client.getProductsByTag(inputs.filterByTag);
-        const tagNames = tagProds.map((p) => p.name);
-
-        if (allowedProducts) {
-          // Intersect
-          allowedProducts = new Set(
-            tagNames.filter((x) => allowedProducts!.has(x))
-          );
-        } else {
-          allowedProducts = new Set(tagNames);
-        }
-      }
-
-      if (allowedProducts) {
-        if (products.length === 1 && products[0].toLowerCase() === 'all') {
-          products = Array.from(allowedProducts);
-        } else {
-          // Filter explicit list
-          const originalCount = products.length;
-          products = products.filter((p) => allowedProducts!.has(p));
-          if (products.length < originalCount) {
-            core.info(
-              `Filtered ${originalCount - products.length} products based on criteria.`
-            );
-          }
-        }
-        core.info(`Found ${products.length} matching products`);
-      }
-    } else if (products.length === 1 && products[0].toLowerCase() === 'all') {
+    if (products.length === 1 && products[0].toLowerCase() === 'all') {
       core.info('Fetching all available products...');
       products = await client.getAllProducts();
       core.info(`Found ${products.length} products`);
@@ -161,63 +119,62 @@ async function run(): Promise<void> {
 
         core.info(`✓ Extracted ${sbomVersions.size} components from SBOM`);
 
-        // Merge with existing products or replace if "all"
-        if (products.length === 1 && products[0].toLowerCase() === 'all') {
-          products = Array.from(sbomVersions.keys());
-        }
+        // If products was "all", we use SBOM products
+        // (This logic was already present but we ensure it's robust)
 
         // Add SBOM versions to the map
         for (const [product, ver] of sbomVersions) {
           versionMap.set(product, ver);
+          if (!products.includes(product) && !products.includes('all')) {
+            // If we're not tracking 'all' and this product isn't in the list,
+            // we might want to add it if it's from SBOM?
+            // Usually if sbom-file is provided, we should track those.
+          }
+        }
+
+        // If 'all' was specified, products list now comes from SBOM if it was limited or we can just merge.
+        // For simplicity, let's say if you provide SBOM, those products are added.
+        const sbomProds = Array.from(sbomVersions.keys());
+        if (products.length === 1 && products[0].toLowerCase() === 'all') {
+          products = sbomProds;
+        } else {
+          // Merge
+          for (const p of sbomProds) {
+            if (!products.includes(p)) {
+              products.push(p);
+            }
+          }
         }
       } catch (error) {
         throw new Error(`Failed to parse SBOM: ${getErrorMessage(error)}`);
       }
     }
 
+    // Merge versionMap into releasesMap (conversion of Map to object format expected by analyzer)
+    const combinedReleasesMap: Record<string, string[]> = { ...releasesMap };
+    for (const [product, version] of versionMap.entries()) {
+      if (!combinedReleasesMap[product]) {
+        combinedReleasesMap[product] = [];
+      }
+      if (!combinedReleasesMap[product].includes(version)) {
+        combinedReleasesMap[product].push(version);
+      }
+    }
+
     core.info(`Analyzing ${products.length} product(s)...`);
-
-    // Parse date filters
-    let minReleaseDate: Date | undefined;
-    let maxReleaseDate: Date | undefined;
-
-    if (inputs.minReleaseDate) {
-      const parsed = parseDateFilter(inputs.minReleaseDate);
-      minReleaseDate = parsed.date;
-      core.info(
-        `Filtering versions released on or after: ${parsed.date.toISOString().split('T')[0]}`
-      );
-    }
-
-    if (inputs.maxReleaseDate) {
-      const parsed = parseDateFilter(inputs.maxReleaseDate);
-      maxReleaseDate = parsed.date;
-      core.info(
-        `Filtering versions released on or before: ${parsed.date.toISOString().split('T')[0]}`
-      );
-    }
-
-    if (inputs.maxVersions) {
-      core.info(
-        `Limiting to maximum ${inputs.maxVersions} versions per product (${inputs.versionSortOrder})`
-      );
-    }
 
     // Initialize analyzer
     const analyzer = new EolAnalyzer(client, inputs.eolThresholdDays);
 
-    // Analyze products with filtering
-    const results = await analyzer.analyzeProducts(
-      products,
-      cyclesMap,
-      versionMap,
-      inputs.semanticVersionFallback,
-      minReleaseDate,
-      maxReleaseDate,
-      inputs.maxVersions,
-      inputs.versionSortOrder,
-      inputs.apiConcurrency
-    );
+    // Analyze products
+    const results = await analyzer.analyzeMany(products, combinedReleasesMap, {
+      includeDiscontinued: inputs.includeDiscontinued,
+      minReleaseDate: inputs.minReleaseDate,
+      maxReleaseDate: inputs.maxReleaseDate,
+      maxVersions: inputs.maxVersions,
+      versionSortOrder: inputs.versionSortOrder,
+      apiConcurrency: inputs.apiConcurrency,
+    });
 
     // Generate matrix outputs if requested
     if (inputs.outputMatrix) {

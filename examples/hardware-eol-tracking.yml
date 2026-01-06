@@ -20,13 +20,13 @@ jobs:
       
       - name: Check hardware EOL status
         id: eol-check
-        uses: broadsage/endoflife-action@v3
+        uses: broadsage/endoflife-action@v4
         with:
           # Track hardware devices
           products: 'iphone,pixel,surface,kindle'
           
-          # Specify device models
-          cycles: |
+          # Specify exact releases/models
+          releases: |
             {
               "iphone": ["15", "14", "13"],
               "pixel": ["8", "7", "6"],

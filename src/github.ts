@@ -72,8 +72,9 @@ export class GitHubIntegration {
       core.info(`Created issue #${issue.data.number}`);
       return issue.data.number;
     } catch (error) {
+      // Log error but don't fail the action if issue creation fails
       core.error(
-        `Failed to search for existing issues: ${getErrorMessage(error)}`
+        `Failed to create or update GitHub issue: ${getErrorMessage(error)}`
       );
       return null;
     }

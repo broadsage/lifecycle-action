@@ -20,13 +20,13 @@ jobs:
       
       - name: Check base image EOL status
         id: eol-check
-        uses: broadsage/endoflife-action@v1
+        uses: broadsage/endoflife-action@v4
         with:
           # Track base images and runtimes
           products: 'ubuntu,alpine,debian,python,nodejs,nginx'
           
-          # Specify exact versions used in Dockerfiles
-          cycles: |
+          # Specify exact releases used in Dockerfiles
+          releases: |
             {
               "ubuntu": ["22.04", "20.04"],
               "alpine": ["3.19", "3.18"],

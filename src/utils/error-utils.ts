@@ -40,23 +40,23 @@ export function createError(message: string, cause?: unknown): Error {
  * This centralizes error handling logic to eliminate duplication
  *
  * @param error - The error to handle
- * @param context - Context information (product, cycle, etc.)
+ * @param context - Context information (product, release, etc.)
  * @throws The error with added context
  * @example
  * try {
  *   return await this.request(url, schema);
  * } catch (error) {
- *   handleClientError(error, { product: 'python', cycle: '3.7' });
+ *   handleClientError(error, { product: 'python', release: '3.12' });
  * }
  */
 export function handleClientError(
   error: unknown,
-  context: { product?: string; cycle?: string } = {}
+  context: { product?: string; release?: string } = {}
 ): never {
   if (error instanceof EndOfLifeApiError) {
     // Add context to API errors
     if (context.product) error.product = context.product;
-    if (context.cycle) error.cycle = context.cycle;
+    if (context.release) error.release = context.release;
   }
   throw error;
 }

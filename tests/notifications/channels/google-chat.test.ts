@@ -149,7 +149,7 @@ describe('GoogleChatChannel', () => {
                 severity: NotificationSeverity.INFO,
                 fields: [
                     { name: 'Products Checked', value: '5', inline: true },
-                    { name: 'Cycles Checked', value: '10', inline: true },
+                    { name: 'Releases Checked', value: '10', inline: true },
                     { name: 'EOL Versions', value: '2', inline: true },
                     { name: 'Approaching EOL', value: '1', inline: true },
                     { name: 'Other Field', value: 'Value', inline: true },

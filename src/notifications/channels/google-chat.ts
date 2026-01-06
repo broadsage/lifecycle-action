@@ -134,7 +134,7 @@ export class GoogleChatChannel extends BaseNotificationChannel {
   private getIconForField(fieldName: string): string {
     const icons: Record<string, string> = {
       'Products Checked': 'DESCRIPTION',
-      'Cycles Checked': 'BOOKMARK',
+      'Releases Checked': 'BOOKMARK',
       'EOL Versions': 'STAR',
       'Approaching EOL': 'CLOCK',
     };

@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Check Node.js Version from package.json
-        uses: broadsage/endoflife-action@v2
+        uses: broadsage/endoflife-action@v4
         with:
           products: 'nodejs'
           file-path: 'package.json'
@@ -30,7 +30,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Check npm Version
-        uses: broadsage/endoflife-action@v2
+        uses: broadsage/endoflife-action@v4
         with:
           products: 'npm'
           file-path: 'package.json'

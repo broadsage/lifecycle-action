@@ -5,13 +5,7 @@ import { differenceInDays, parseISO, isValid } from 'date-fns';
 import * as core from '@actions/core';
 import pLimit from 'p-limit';
 import { getErrorMessage } from './utils/error-utils';
-import {
-  Cycle,
-  EolStatus,
-  ProductVersionInfo,
-  ActionResults,
-  ProductCycles,
-} from './types';
+import { Release, EolStatus, ProductVersionInfo, ActionResults } from './types';
 import { EndOfLifeClient } from './client';
 
 /**
@@ -24,9 +18,9 @@ export class EolAnalyzer {
   ) {}
 
   /**
-   * Parse date from various formats (string, boolean, undefined)
+   * Parse date from various formats
    */
-  private parseDate(value: string | boolean | undefined): Date | null {
+  private parseDate(value: string | boolean | null | undefined): Date | null {
     if (!value || typeof value === 'boolean') return null;
 
     try {
@@ -38,14 +32,14 @@ export class EolAnalyzer {
   }
 
   /**
-   * Determine EOL status for a cycle
+   * Determine EOL status for a release
    */
-  private determineEolStatus(cycle: Cycle): EolStatus {
-    const eolDate = this.parseDate(cycle.eol);
+  private determineEolStatus(release: Release): EolStatus {
+    const eolDate = this.parseDate(release.eolFrom);
 
     if (!eolDate) {
-      // Check if eol is explicitly true (still supported)
-      if (cycle.eol === true) return EolStatus.ACTIVE;
+      if (release.isEol === true) return EolStatus.END_OF_LIFE;
+      if (release.isEol === false) return EolStatus.ACTIVE;
       return EolStatus.UNKNOWN;
     }
 
@@ -64,53 +58,54 @@ export class EolAnalyzer {
   /**
    * Calculate days until EOL
    */
-  private calculateDaysUntilEol(cycle: Cycle): number | null {
-    const eolDate = this.parseDate(cycle.eol);
+  private calculateDaysUntilEol(release: Release): number | null {
+    const eolDate = this.parseDate(release.eolFrom);
     if (!eolDate) return null;
 
     return differenceInDays(eolDate, new Date());
   }
 
   /**
-   * Check if cycle is LTS
+   * Check if release is LTS
    */
-  private isLts(cycle: Cycle): boolean {
-    if (cycle.lts === true) return true;
-    if (typeof cycle.lts === 'string') return true;
+  private isLts(release: Release): boolean {
+    if (release.isLts === true) return true;
+    if (typeof release.ltsFrom === 'string') return true;
     return false;
   }
 
   /**
    * Check if product is discontinued
    */
-  private isDiscontinued(cycle: Cycle): boolean {
-    if (cycle.discontinued === true) return true;
-    if (typeof cycle.discontinued === 'string') {
-      const date = this.parseDate(cycle.discontinued);
+  private isDiscontinued(release: Release): boolean {
+    if (release.discontinued === true) return true;
+    if (typeof release.discontinued === 'string') {
+      const date = this.parseDate(release.discontinued);
       if (date) {
         return date <= new Date();
       }
+      return true;
     }
     return false;
   }
 
   /**
-   * Check if cycle has extended support
+   * Check if release has extended support
    */
-  private hasExtendedSupport(cycle: Cycle): boolean {
-    if (cycle.extendedSupport === true) return true;
-    if (typeof cycle.extendedSupport === 'string') return true;
+  private hasExtendedSupport(release: Release): boolean {
+    if (release.isEoas === true) return true;
+    if (typeof release.eoasFrom === 'string') return true;
     return false;
   }
 
   /**
-   * Calculate days since latest release
+   * Calculate days since latest version release
    */
-  private calculateDaysSinceLatestRelease(cycle: Cycle): number | null {
-    if (!cycle.latestReleaseDate) return null;
+  private calculateDaysSinceLatestRelease(release: Release): number | null {
+    if (!release.latest?.date) return null;
 
     try {
-      const latestRelease = parseISO(cycle.latestReleaseDate);
+      const latestRelease = parseISO(release.latest.date);
       if (!isValid(latestRelease)) return null;
       return differenceInDays(new Date(), latestRelease);
     } catch {
@@ -119,342 +114,191 @@ export class EolAnalyzer {
   }
 
   /**
-   * Analyze a single product cycle
+   * Analyze a single product release
    */
-  analyzeProductCycle(product: string, cycle: Cycle): ProductVersionInfo {
-    const status = this.determineEolStatus(cycle);
-    const eolDate = this.parseDate(cycle.eol);
-    const supportDate = this.parseDate(cycle.support);
-    const releaseDate = cycle.releaseDate ? parseISO(cycle.releaseDate) : null;
-    const discontinuedDate = this.parseDate(cycle.discontinued);
-    const extendedSupportDate = this.parseDate(cycle.extendedSupport);
+  analyzeProductRelease(product: string, release: Release): ProductVersionInfo {
+    const status = this.determineEolStatus(release);
+    const eolDate = this.parseDate(release.eolFrom);
+    const supportDate = release.isMaintained ? new Date() : null;
+    const releaseDate = release.releaseDate
+      ? parseISO(release.releaseDate)
+      : null;
+    const discontinuedDate = this.parseDate(release.discontinued);
+    const extendedSupportDate = this.parseDate(release.eoasFrom);
 
     return {
       product,
-      cycle: String(cycle.cycle),
+      release: String(release.name),
       status,
       eolDate: eolDate ? eolDate.toISOString().split('T')[0] : null,
-      daysUntilEol: this.calculateDaysUntilEol(cycle),
+      daysUntilEol: this.calculateDaysUntilEol(release),
       releaseDate: releaseDate ? releaseDate.toISOString().split('T')[0] : null,
-      latestVersion: cycle.latest || null,
-      isLts: this.isLts(cycle),
+      latestVersion: release.latest?.name || null,
+      isLts: this.isLts(release),
       supportDate: supportDate ? supportDate.toISOString().split('T')[0] : null,
-      link: cycle.link || null,
-      // Extended fields
+      link: release.link || null,
       discontinuedDate: discontinuedDate
         ? discontinuedDate.toISOString().split('T')[0]
         : null,
-      isDiscontinued: this.isDiscontinued(cycle),
+      isDiscontinued: this.isDiscontinued(release),
       extendedSupportDate: extendedSupportDate
         ? extendedSupportDate.toISOString().split('T')[0]
         : null,
-      hasExtendedSupport: this.hasExtendedSupport(cycle),
-      latestReleaseDate: cycle.latestReleaseDate || null,
-      daysSinceLatestRelease: this.calculateDaysSinceLatestRelease(cycle),
-      rawData: cycle,
+      hasExtendedSupport: this.hasExtendedSupport(release),
+      latestReleaseDate: release.latest?.date || null,
+      daysSinceLatestRelease: this.calculateDaysSinceLatestRelease(release),
+      rawData: release,
     };
   }
 
   /**
-   * Filter cycles by release date
+   * Filter releases by release date
    */
-  filterByReleaseDate(
-    cycles: Cycle[],
-    minDate?: Date,
-    maxDate?: Date
-  ): Cycle[] {
-    if (!minDate && !maxDate) return cycles;
+  private filterReleasesByDate(
+    releases: Release[],
+    minDate?: string,
+    maxDate?: string
+  ): Release[] {
+    let filtered = [...releases];
 
-    return cycles.filter((cycle) => {
-      if (!cycle.releaseDate) return false;
-
-      try {
-        const releaseDate = parseISO(cycle.releaseDate);
-        if (!isValid(releaseDate)) return false;
-
-        if (minDate && releaseDate < minDate) return false;
-        if (maxDate && releaseDate > maxDate) return false;
-
-        return true;
-      } catch {
-        return false;
-      }
-    });
-  }
-
-  /**
-   * Sort and limit versions
-   */
-  limitVersions(
-    cycles: Cycle[],
-    maxVersions: number | null,
-    sortOrder: 'newest-first' | 'oldest-first'
-  ): Cycle[] {
-    if (!maxVersions) return cycles;
-
-    // Sort cycles by release date
-    const sorted = [...cycles].sort((a, b) => {
-      const dateA = a.releaseDate ? parseISO(a.releaseDate) : new Date(0);
-      const dateB = b.releaseDate ? parseISO(b.releaseDate) : new Date(0);
-
-      if (sortOrder === 'newest-first') {
-        return dateB.getTime() - dateA.getTime();
-      } else {
-        return dateA.getTime() - dateB.getTime();
-      }
-    });
-
-    return sorted.slice(0, maxVersions);
-  }
-
-  /**
-   * Analyze all cycles for a product
-   */
-  async analyzeProduct(
-    product: string,
-    specificCycles?: string[],
-    minReleaseDate?: Date,
-    maxReleaseDate?: Date,
-    maxVersions?: number | null,
-    versionSortOrder: 'newest-first' | 'oldest-first' = 'newest-first'
-  ): Promise<ProductVersionInfo[]> {
-    core.info(`Analyzing product: ${product}`);
-
-    try {
-      let cycles = await this.client.getProductCycles(product);
-
-      if (specificCycles && specificCycles.length > 0) {
-        // Filter to specific cycles
-        cycles = cycles.filter((cycle) =>
-          specificCycles.includes(String(cycle.cycle))
-        );
-
-        if (cycles.length === 0) {
-          core.warning(
-            `No matching cycles found for ${product}. Requested: ${specificCycles.join(', ')}`
-          );
-        }
-      }
-
-      // Apply date filtering
-      cycles = this.filterByReleaseDate(cycles, minReleaseDate, maxReleaseDate);
-
-      // Apply version limiting
-      cycles = this.limitVersions(
-        cycles,
-        maxVersions ?? null,
-        versionSortOrder
-      );
-
-      return cycles.map((cycle) => this.analyzeProductCycle(product, cycle));
-    } catch (error) {
-      core.error(
-        `Failed to analyze product ${product}: ${getErrorMessage(error)}`
-      );
-      throw error;
+    if (minDate) {
+      const min = parseISO(minDate.replace(/^[><]=?/, ''));
+      filtered = filtered.filter((r) => {
+        if (!r.releaseDate) return false;
+        const releaseDate = parseISO(r.releaseDate);
+        return releaseDate >= min;
+      });
     }
+
+    if (maxDate) {
+      const max = parseISO(maxDate.replace(/^[><]=?/, ''));
+      filtered = filtered.filter((r) => {
+        if (!r.releaseDate) return false;
+        const releaseDate = parseISO(r.releaseDate);
+        return releaseDate <= max;
+      });
+    }
+
+    return filtered;
   }
 
   /**
-   * Analyze multiple products with parallel processing
-   * Uses concurrency control to respect API rate limits while maximizing performance
+   * Analyze multiple products and releases
    */
-  async analyzeProducts(
+  async analyzeMany(
     products: string[],
-    cyclesMap?: ProductCycles,
-    versionMap?: Map<string, string>,
-    semanticFallback = true,
-    minReleaseDate?: Date,
-    maxReleaseDate?: Date,
-    maxVersions?: number | null,
-    versionSortOrder: 'newest-first' | 'oldest-first' = 'newest-first',
-    concurrency = 5 // Max concurrent API requests
+    releasesMap: Record<string, string[]>,
+    options: {
+      includeDiscontinued?: boolean;
+      minReleaseDate?: string;
+      maxReleaseDate?: string;
+      maxVersions?: number | null;
+      versionSortOrder?: 'newest-first' | 'oldest-first';
+      apiConcurrency?: number;
+    } = {}
   ): Promise<ActionResults> {
-    core.info(
-      `Analyzing ${products.length} product(s) with concurrency limit of ${concurrency}`
-    );
+    const limit = pLimit(options.apiConcurrency || 5);
+    const results: ProductVersionInfo[] = [];
 
-    // Create concurrency limiter
-    const limit = pLimit(concurrency);
-
-    // Create parallel tasks for each product
     const tasks = products.map((product) =>
       limit(async () => {
         try {
-          // Check if specific version is provided for this product
-          const specificVersion = versionMap?.get(product);
+          const productReleases = await this.client.getProductReleases(product);
+          if (!productReleases || productReleases.length === 0) return;
 
-          if (specificVersion) {
-            // Single version mode - check only this version
-            core.info(`Analyzing ${product} version ${specificVersion}`);
+          let targetReleases = productReleases;
 
-            const cycleInfo = await this.client.getCycleInfoWithFallback(
-              product,
-              specificVersion,
-              semanticFallback
+          // Filter by explicit release versions if provided
+          if (releasesMap[product] && releasesMap[product].length > 0) {
+            targetReleases = productReleases.filter((r) =>
+              releasesMap[product].includes(String(r.name))
             );
+          }
 
-            if (cycleInfo) {
-              const analyzed = this.analyzeProductCycle(product, cycleInfo);
-              return [analyzed];
-            } else {
-              core.warning(
-                `No cycle information found for ${product} version ${specificVersion}`
-              );
-              return [];
+          // Apply date filters
+          targetReleases = this.filterReleasesByDate(
+            targetReleases,
+            options.minReleaseDate,
+            options.maxReleaseDate
+          );
+
+          // Sort releases
+          targetReleases.sort((a, b) => {
+            const dateA = a.releaseDate ? parseISO(a.releaseDate).getTime() : 0;
+            const dateB = b.releaseDate ? parseISO(b.releaseDate).getTime() : 0;
+            return options.versionSortOrder === 'oldest-first'
+              ? dateA - dateB
+              : dateB - dateA;
+          });
+
+          // Limit number of versions
+          if (options.maxVersions) {
+            targetReleases = targetReleases.slice(0, options.maxVersions);
+          }
+
+          for (const release of targetReleases) {
+            if (!options.includeDiscontinued && this.isDiscontinued(release)) {
+              continue;
             }
-          } else {
-            // Multi-cycle mode - existing logic
-            const specificCycles = cyclesMap?.[product];
-            const results = await this.analyzeProduct(
-              product,
-              specificCycles,
-              minReleaseDate,
-              maxReleaseDate,
-              maxVersions,
-              versionSortOrder
-            );
-            return results;
+            results.push(this.analyzeProductRelease(product, release));
           }
         } catch (error) {
-          core.warning(
-            `Skipping product ${product} due to error: ${getErrorMessage(error)}`
+          core.error(
+            `Failed to analyze product ${product}: ${getErrorMessage(error)}`
           );
-          return [];
         }
       })
     );
 
-    // Execute all tasks in parallel (with concurrency limit)
-    const startTime = Date.now();
-    const results = await Promise.all(tasks);
-    const duration = Date.now() - startTime;
+    await Promise.all(tasks);
 
-    // Flatten results
-    const allResults: ProductVersionInfo[] = results.flat();
+    return this.generateSummary(results);
+  }
 
-    core.info(
-      `Analyzed ${allResults.length} cycle(s) across ${products.length} product(s) in ${duration}ms`
+  /**
+   * Generate results summary
+   */
+  generateSummary(products: ProductVersionInfo[]): ActionResults {
+    const eolProducts = products.filter(
+      (p) => p.status === EolStatus.END_OF_LIFE
     );
-
-    const eolProducts = allResults.filter(
-      (r) => r.status === EolStatus.END_OF_LIFE
+    const approachingEolProducts = products.filter(
+      (p) => p.status === EolStatus.APPROACHING_EOL
     );
-    const approachingEolProducts = allResults.filter(
-      (r) => r.status === EolStatus.APPROACHING_EOL
-    );
-    const staleProducts = allResults.filter(
-      (r) =>
-        r.daysSinceLatestRelease !== null &&
-        r.daysSinceLatestRelease > this.eolThresholdDays
-    );
-    const discontinuedProducts = allResults.filter((r) => r.isDiscontinued);
-    const extendedSupportProducts = allResults.filter(
-      (r) => r.hasExtendedSupport
+    const discontinuedProducts = products.filter((p) => p.isDiscontinued);
+    // Stale is determined by days since latest release (e.g., > 1 year)
+    const staleProducts = products.filter(
+      (p) => p.daysSinceLatestRelease !== null && p.daysSinceLatestRelease > 365
     );
 
     const latestVersions: Record<string, string> = {};
-    for (const result of allResults) {
-      if (result.latestVersion && !latestVersions[result.product]) {
-        latestVersions[result.product] = result.latestVersion;
+    for (const p of products) {
+      if (p.latestVersion) {
+        if (
+          !latestVersions[p.product] ||
+          p.status === EolStatus.ACTIVE ||
+          p.status === EolStatus.APPROACHING_EOL
+        ) {
+          latestVersions[p.product] = p.latestVersion;
+        }
       }
     }
-
-    const summary = this.generateSummary(
-      allResults,
-      eolProducts,
-      approachingEolProducts,
-      staleProducts,
-      discontinuedProducts
-    );
 
     return {
       eolDetected: eolProducts.length > 0,
       approachingEol: approachingEolProducts.length > 0,
       staleDetected: staleProducts.length > 0,
       discontinuedDetected: discontinuedProducts.length > 0,
-      totalProductsChecked: new Set(allResults.map((r) => r.product)).size,
-      totalCyclesChecked: allResults.length,
-      products: allResults,
+      totalProductsChecked: new Set(products.map((p) => p.product)).size,
+      totalReleasesChecked: products.length,
+      products,
       eolProducts,
       approachingEolProducts,
       staleProducts,
       discontinuedProducts,
-      extendedSupportProducts,
+      extendedSupportProducts: products.filter((p) => p.hasExtendedSupport),
       latestVersions,
-      summary,
+      summary: `Analyzed ${products.length} releases for ${new Set(products.map((p) => p.product)).size} products. Found ${eolProducts.length} EOL and ${approachingEolProducts.length} approaching EOL.`,
     };
-  }
-
-  /**
-   * Generate human-readable summary
-   */
-  private generateSummary(
-    allProducts: ProductVersionInfo[],
-    eolProducts: ProductVersionInfo[],
-    approachingEolProducts: ProductVersionInfo[],
-    staleProducts: ProductVersionInfo[],
-    discontinuedProducts: ProductVersionInfo[]
-  ): string {
-    const lines: string[] = [];
-
-    lines.push(`📊 EndOfLife Analysis Summary`);
-    lines.push(`================================`);
-    lines.push(
-      `Total Products Checked: ${new Set(allProducts.map((p) => p.product)).size}`
-    );
-    lines.push(`Total Cycles Checked: ${allProducts.length}`);
-    lines.push('');
-
-    if (eolProducts.length > 0) {
-      lines.push(`❌ End-of-Life Detected (${eolProducts.length}):`);
-      for (const product of eolProducts) {
-        lines.push(
-          `  - ${product.product} ${product.cycle} (EOL: ${product.eolDate})`
-        );
-      }
-      lines.push('');
-    }
-
-    if (approachingEolProducts.length > 0) {
-      lines.push(`⚠️  Approaching EOL (${approachingEolProducts.length}):`);
-      for (const product of approachingEolProducts) {
-        lines.push(
-          `  - ${product.product} ${product.cycle} (${product.daysUntilEol} days until EOL: ${product.eolDate})`
-        );
-      }
-      lines.push('');
-    }
-
-    if (staleProducts.length > 0) {
-      lines.push(`⏰ Stale Versions (${staleProducts.length}):`);
-      for (const product of staleProducts) {
-        lines.push(
-          `  - ${product.product} ${product.cycle} (${product.daysSinceLatestRelease} days since last release)`
-        );
-      }
-      lines.push('');
-    }
-
-    if (discontinuedProducts.length > 0) {
-      lines.push(`🚫 Discontinued Products (${discontinuedProducts.length}):`);
-      for (const product of discontinuedProducts) {
-        lines.push(
-          `  - ${product.product} ${product.cycle}${product.discontinuedDate ? ` (Discontinued: ${product.discontinuedDate})` : ''}`
-        );
-      }
-      lines.push('');
-    }
-
-    if (
-      eolProducts.length === 0 &&
-      approachingEolProducts.length === 0 &&
-      staleProducts.length === 0 &&
-      discontinuedProducts.length === 0
-    ) {
-      lines.push('✅ All tracked versions are actively supported!');
-    }
-
-    return lines.join('\n');
   }
 }

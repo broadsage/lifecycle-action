@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2025 Broadsage
 
 import * as core from '@actions/core';
-import { ActionInputs, ProductCycles } from './types';
+import { ActionInputs, ProductReleases, NotificationSeverity } from './types';
 import { getErrorMessage } from './utils/error-utils';
 
 /**
@@ -10,7 +10,7 @@ import { getErrorMessage } from './utils/error-utils';
  */
 export function getInputs(): ActionInputs {
   const products = core.getInput('products', { required: true });
-  const cycles = core.getInput('cycles') || '{}';
+  const releases = core.getInput('releases') || core.getInput('cycles') || '{}';
   const checkEol = core.getBooleanInput('check-eol');
   const eolThresholdDays = parseInt(
     core.getInput('eol-threshold-days') || '90',
@@ -63,18 +63,64 @@ export function getInputs(): ActionInputs {
   const versionSortOrder = (core.getInput('version-sort-order') ||
     'newest-first') as ActionInputs['versionSortOrder'];
 
-  const filterByCategory = core.getInput('filter-by-category') || '';
-  const filterByTag = core.getInput('filter-by-tag') || '';
+  // Notification inputs
+  const failOnNotificationFailure = core.getBooleanInput(
+    'fail-on-notification-failure'
+  );
+  const notificationRetryAttempts = parseInt(
+    core.getInput('notification-retry-attempts') || '3',
+    10
+  );
+  const notificationRetryDelay = parseInt(
+    core.getInput('notification-retry-delay') || '1000',
+    10
+  );
+
+  // Webhook inputs
+  const webhookUrl = core.getInput('webhook-url') || undefined;
+  const webhookMinSeverity = (core.getInput('webhook-min-severity') ||
+    'info') as NotificationSeverity;
+  const webhookCustomHeaders =
+    core.getInput('webhook-custom-headers') || undefined;
+  const webhookPayloadTemplate =
+    core.getInput('webhook-payload-template') || undefined;
+
+  // Teams inputs
+  const teamsUrl = core.getInput('teams-url') || undefined;
+  const teamsMinSeverity = (core.getInput('teams-min-severity') ||
+    'info') as NotificationSeverity;
+
+  // Google Chat inputs
+  const googleChatUrl = core.getInput('google-chat-url') || undefined;
+  const googleChatMinSeverity = (core.getInput('google-chat-min-severity') ||
+    'info') as NotificationSeverity;
+
+  // Discord inputs
+  const discordUrl = core.getInput('discord-url') || undefined;
+  const discordMinSeverity = (core.getInput('discord-min-severity') ||
+    'info') as NotificationSeverity;
+  const discordUsername = core.getInput('discord-username') || undefined;
+  const discordAvatarUrl = core.getInput('discord-avatar-url') || undefined;
+
+  // Slack inputs
+  const slackUrl = core.getInput('slack-url') || undefined;
+  const slackMinSeverity = (core.getInput('slack-min-severity') ||
+    'info') as NotificationSeverity;
+  const slackChannel = core.getInput('slack-channel') || undefined;
+  const slackUsername = core.getInput('slack-username') || undefined;
+  const slackIconEmoji = core.getInput('slack-icon-emoji') || undefined;
+  const slackIconUrl = core.getInput('slack-icon-url') || undefined;
 
   // SBOM inputs
-  const sbomFile = core.getInput('sbom-file') || '';
+  const sbomFile = core.getInput('sbom-file') || undefined;
   const sbomFormat = (core.getInput('sbom-format') ||
     'auto') as ActionInputs['sbomFormat'];
-  const sbomComponentMapping = core.getInput('sbom-component-mapping') || '';
+  const sbomComponentMapping =
+    core.getInput('sbom-component-mapping') || undefined;
 
   return {
     products,
-    cycles,
+    releases,
     checkEol,
     eolThresholdDays,
     failOnEol,
@@ -108,8 +154,27 @@ export function getInputs(): ActionInputs {
     maxReleaseDate,
     maxVersions,
     versionSortOrder,
-    filterByCategory,
-    filterByTag,
+    failOnNotificationFailure,
+    notificationRetryAttempts,
+    notificationRetryDelay,
+    webhookUrl,
+    webhookMinSeverity,
+    webhookCustomHeaders,
+    webhookPayloadTemplate,
+    teamsUrl,
+    teamsMinSeverity,
+    googleChatUrl,
+    googleChatMinSeverity,
+    discordUrl,
+    discordMinSeverity,
+    discordUsername,
+    discordAvatarUrl,
+    slackUrl,
+    slackMinSeverity,
+    slackChannel,
+    slackUsername,
+    slackIconEmoji,
+    slackIconUrl,
   };
 }
 
@@ -124,21 +189,21 @@ export function parseProducts(productsInput: string): string[] {
 }
 
 /**
- * Parse cycles input
+ * Parse releases input
  */
-export function parseCycles(cyclesInput: string): ProductCycles {
-  if (!cyclesInput || cyclesInput.trim() === '{}') {
+export function parseReleases(releasesInput: string): ProductReleases {
+  if (!releasesInput || releasesInput.trim() === '{}') {
     return {};
   }
 
   try {
-    const parsed: unknown = JSON.parse(cyclesInput);
+    const parsed: unknown = JSON.parse(releasesInput);
     if (typeof parsed !== 'object' || Array.isArray(parsed)) {
-      throw new Error('Cycles must be a JSON object');
+      throw new Error('Releases must be a JSON object');
     }
-    return parsed as ProductCycles;
+    return parsed as ProductReleases;
   } catch (error) {
-    throw new Error(`Invalid cycles JSON: ${getErrorMessage(error)}`);
+    throw new Error(`Invalid releases JSON: ${getErrorMessage(error)}`);
   }
 }
 
@@ -168,11 +233,11 @@ export function validateInputs(inputs: ActionInputs): void {
     );
   }
 
-  // Validate cycles JSON
+  // Validate releases JSON
   try {
-    parseCycles(inputs.cycles);
+    parseReleases(inputs.releases);
   } catch (error) {
-    throw new Error(`Invalid cycles input: ${getErrorMessage(error)}`);
+    throw new Error(`Invalid releases input: ${getErrorMessage(error)}`);
   }
 
   // Validate file extraction inputs
@@ -192,12 +257,12 @@ export function validateInputs(inputs: ActionInputs): void {
     }
   }
 
-  // Validate that file-path, version, or cycles is provided
-  if (!inputs.filePath && !inputs.version && inputs.cycles === '{}') {
+  // Validate that file-path, version, or releases is provided
+  if (!inputs.filePath && !inputs.version && inputs.releases === '{}') {
     const products = parseProducts(inputs.products);
     if (products.length === 1 && products[0].toLowerCase() !== 'all') {
       throw new Error(
-        'For single product tracking, either file-path, version, or cycles must be specified'
+        'For single product tracking, either file-path, version, or releases must be specified'
       );
     }
   }
@@ -226,11 +291,46 @@ export function validateInputs(inputs: ActionInputs): void {
 }
 
 /**
+ * Parse date filter string into operator and date
+ */
+export function parseDateFilter(dateStr: string): {
+  operator: string;
+  date: Date;
+} {
+  let operator = '=';
+  let cleanDate = dateStr.trim();
+
+  if (dateStr.startsWith('>=')) {
+    operator = '>=';
+    cleanDate = dateStr.substring(2).trim();
+  } else if (dateStr.startsWith('<=')) {
+    operator = '<=';
+    cleanDate = dateStr.substring(2).trim();
+  } else if (dateStr.startsWith('>')) {
+    operator = '>';
+    cleanDate = dateStr.substring(1).trim();
+  } else if (dateStr.startsWith('<')) {
+    operator = '<';
+    cleanDate = dateStr.substring(1).trim();
+  }
+
+  // Handle year-only format
+  if (/^\d{4}$/.test(cleanDate)) {
+    if (operator === '<=') {
+      return { operator, date: new Date(`${cleanDate}-12-31`) };
+    }
+    return { operator, date: new Date(`${cleanDate}-01-01`) };
+  }
+
+  return { operator, date: new Date(cleanDate) };
+}
+
+/**
  * Validate date filter format
  */
 export function validateDateFilter(dateStr: string, fieldName: string): void {
   // Remove operators
-  const cleanDate = dateStr.replace(/^(>=|<=)/, '');
+  const cleanDate = dateStr.replace(/^(>=|<=|>|<)/, '');
 
   // Check if it's a year (YYYY)
   if (/^\d{4}$/.test(cleanDate)) {
@@ -250,43 +350,5 @@ export function validateDateFilter(dateStr: string, fieldName: string): void {
     return;
   }
 
-  throw new Error(
-    `${fieldName}: Invalid date format. Use YYYY, YYYY-MM-DD, >=YYYY, or <=YYYY`
-  );
-}
-
-/**
- * Parse date filter with operators
- */
-export function parseDateFilter(dateStr: string): {
-  operator: '>=' | '<=' | '=';
-  date: Date;
-} {
-  let operator: '>=' | '<=' | '=' = '=';
-  let cleanDate = dateStr;
-
-  if (dateStr.startsWith('>=')) {
-    operator = '>=';
-    cleanDate = dateStr.substring(2);
-  } else if (dateStr.startsWith('<=')) {
-    operator = '<=';
-    cleanDate = dateStr.substring(2);
-  }
-
-  // If it's just a year, convert to full date
-  if (/^\d{4}$/.test(cleanDate)) {
-    // For >= use start of year, for <= use end of year
-    if (operator === '>=') {
-      cleanDate = `${cleanDate}-01-01`;
-    } else if (operator === '<=') {
-      cleanDate = `${cleanDate}-12-31`;
-    } else {
-      cleanDate = `${cleanDate}-01-01`;
-    }
-  }
-
-  return {
-    operator,
-    date: new Date(cleanDate),
-  };
+  throw new Error(`${fieldName}: Invalid date format. Use YYYY or YYYY-MM-DD`);
 }

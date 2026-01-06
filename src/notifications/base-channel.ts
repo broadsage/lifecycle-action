@@ -262,8 +262,8 @@ export abstract class BaseNotificationChannel implements INotificationChannel {
         inline: true,
       },
       {
-        name: 'Cycles Checked',
-        value: results.totalCyclesChecked.toString(),
+        name: 'Releases Checked',
+        value: results.totalReleasesChecked.toString(),
         inline: true,
       },
     ];
@@ -288,7 +288,7 @@ export abstract class BaseNotificationChannel implements INotificationChannel {
     if (results.eolProducts.length > 0) {
       const topEol = results.eolProducts
         .slice(0, 3)
-        .map((p) => `• ${p.product} ${p.cycle}`)
+        .map((p) => `• ${p.product} ${p.release}`)
         .join('\n');
       fields.push({
         name: 'EOL Products',

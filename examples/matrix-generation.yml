@@ -19,17 +19,17 @@ jobs:
     steps:
       - name: Check Python EOL Status
         id: eol
-        uses: broadsage/endoflife-action@v3
+        uses: broadsage/endoflife-action@v4
         with:
           products: 'python'
           output-matrix: true
           exclude-eol-from-matrix: true
           exclude-approaching-eol-from-matrix: false
-          min-release-date: '>=2020' # Only Python versions from 2020 onwards
-          max-versions: 5 # Limit to 5 most recent versions
+          min-release-date: '>=2020' # Only Python releases from 2020 onwards
+          max-versions: 5 # Limit to 5 most recent releases
           version-sort-order: 'newest-first'
   
-  # Job 2: Test against all supported Python versions
+  # Job 2: Test against all supported Python releases
   test-python:
     name: Test on Python ${{ matrix.version }}
     needs: get-python-versions
@@ -84,12 +84,12 @@ jobs:
     steps:
       - name: Check Node.js EOL Status
         id: eol
-        uses: broadsage/endoflife-action@v3
+        uses: broadsage/endoflife-action@v4
         with:
           products: 'nodejs'
           output-matrix: true
           exclude-eol-from-matrix: true
-          max-versions: 3 # Latest 3 LTS versions
+          max-versions: 3 # Latest 3 LTS releases
 
   test-nodejs:
     name: Test on Node.js ${{ matrix.version }}

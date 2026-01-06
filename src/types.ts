@@ -4,79 +4,101 @@
 import { z } from 'zod';
 
 /**
- * Schema for a single release cycle from the EndOfLife.date API
+ * Schema for the EndOfLife.date API v1 response wrapper
  */
-export const BaseCycleSchema = z.object({
-  cycle: z.union([z.string(), z.number()]),
-  releaseDate: z.string().optional(),
-  eol: z.union([z.string(), z.boolean()]).optional(),
-  latest: z.string().optional(),
-  link: z.string().nullable().optional(),
-  lts: z.union([z.string(), z.boolean()]).optional(),
-  support: z.union([z.string(), z.boolean()]).optional(),
-  discontinued: z.union([z.string(), z.boolean()]).optional(),
-  latestReleaseDate: z.string().optional(),
-  extendedSupport: z.union([z.string(), z.boolean()]).optional(),
-});
-
-export type Cycle = z.infer<typeof BaseCycleSchema>;
-
-export const CycleSchema: z.ZodType<Cycle> = z.preprocess((val: any) => {
-  if (typeof val === 'object' && val !== null) {
-    return {
-      ...val,
-      // v1 uses 'name', root API uses 'cycle'
-      cycle: val.cycle ?? val.name,
-      // v1 uses 'eolFrom', root API uses 'eol'
-      eol: val.eol ?? val.eolFrom,
-      // v1 uses 'isLts' (bool) or 'ltsFrom' (date), root API uses 'lts'
-      lts: val.lts ?? val.isLts ?? val.ltsFrom,
-      // v1 uses nested 'latest' object, root API uses string
-      latest: typeof val.latest === 'object' ? val.latest?.name : val.latest,
-    };
-  }
-  return val;
-}, BaseCycleSchema) as any;
+export function createV1ResponseSchema<T>(schema: z.ZodType<T>) {
+  return z.object({
+    schema_version: z.string(),
+    generated_at: z.string().optional(),
+    last_modified: z.string().optional(),
+    total: z.number().optional(),
+    result: schema,
+  });
+}
 
 /**
- * Schema for the list of all products
+ * Latest release version information
  */
-export const AllProductsSchema = z.array(z.string());
-
-export type AllProducts = z.infer<typeof AllProductsSchema>;
-
-/**
- * Schema for product summary (from /products endpoint)
- */
-export const ProductSummarySchema = z.object({
+export const LatestReleaseSchema = z.object({
   name: z.string(),
-  label: z.string().optional(),
-  category: z.string().optional(),
+  date: z.string().optional(),
+  link: z.string().optional(),
 });
 
-export type ProductSummary = z.infer<typeof ProductSummarySchema>;
+export type LatestRelease = z.infer<typeof LatestReleaseSchema>;
 
 /**
- * Schema for full product data (from /products/{product} endpoint)
+ * Detailed information about a product release (v1 API)
+ */
+export const ReleaseSchema = z.object({
+  name: z.union([z.string(), z.number()]),
+  codename: z.string().nullable().optional(),
+  label: z.string().optional(),
+  releaseDate: z.string().optional(),
+  isLts: z.boolean().optional(),
+  ltsFrom: z.string().nullable().optional(),
+  isEoas: z.boolean().optional(),
+  eoasFrom: z.string().nullable().optional(),
+  isEol: z.boolean().optional(),
+  eolFrom: z.union([z.string(), z.boolean(), z.null()]).optional(),
+  isEoes: z.boolean().optional(),
+  eoesFrom: z.string().nullable().optional(),
+  isMaintained: z.boolean().optional(),
+  latest: LatestReleaseSchema.optional(),
+  link: z.string().nullable().optional(),
+  discontinued: z.union([z.string(), z.boolean(), z.null()]).optional(),
+});
+
+export type Release = z.infer<typeof ReleaseSchema>;
+
+/**
+ * Product identifier (e.g., CPE, PURL)
+ */
+export const ProductIdentifierSchema = z.object({
+  type: z.string(),
+  id: z.string(),
+});
+
+/**
+ * Full Product structure including all releases (v1 API)
  */
 export const FullProductSchema = z.object({
   name: z.string(),
+  aliases: z.array(z.string()).optional(),
   label: z.string().optional(),
   category: z.string().optional(),
-  releases: z.array(CycleSchema),
+  tags: z.array(z.string()).optional(),
+  versionCommand: z.string().optional(),
+  identifiers: z.array(ProductIdentifierSchema).optional(),
+  links: z.record(z.string(), z.string()).optional(),
+  releases: z.array(ReleaseSchema),
 });
 
 export type FullProduct = z.infer<typeof FullProductSchema>;
 
 /**
- * Schema for categories and tags (simple string arrays)
+ * Product summary (from /products endpoint)
  */
-export const StringListSchema = z.array(z.string());
+export const ProductSummarySchema = z.object({
+  name: z.string(),
+  aliases: z.array(z.string()).optional(),
+  label: z.string().optional(),
+  category: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  uri: z.string().optional(),
+});
 
-export type StringList = z.infer<typeof StringListSchema>;
+export type ProductSummary = z.infer<typeof ProductSummarySchema>;
 
 /**
- * Schema for identifier item (from /identifiers/{type} endpoint)
+ * Schema for the list of all products response
+ */
+export const AllProductsSchema = z.array(ProductSummarySchema);
+
+export type AllProducts = z.infer<typeof AllProductsSchema>;
+
+/**
+ * Identifier item (from /identifiers/{type} endpoint)
  */
 export const IdentifierItemSchema = z.object({
   identifier: z.string(),
@@ -86,21 +108,88 @@ export const IdentifierItemSchema = z.object({
 export type IdentifierItem = z.infer<typeof IdentifierItemSchema>;
 
 /**
- * Schema for identifier list response
+ * Identifier list response
  */
 export const IdentifierListSchema = z.array(IdentifierItemSchema);
 
 export type IdentifierList = z.infer<typeof IdentifierListSchema>;
 
 /**
- * Schema for product cycles mapping
+ * Mapping of product names to specific release versions to track
  */
-export const ProductCyclesSchema = z.record(z.string(), z.array(z.string()));
+export const ProductReleasesSchema = z.record(z.string(), z.array(z.string()));
 
-export type ProductCycles = z.infer<typeof ProductCyclesSchema>;
+export type ProductReleases = z.infer<typeof ProductReleasesSchema>;
 
 /**
- * Matrix output formats
+ * Support and maintenance status for a product release
+ */
+export enum EolStatus {
+  ACTIVE = 'active',
+  APPROACHING_EOL = 'approaching_eol',
+  END_OF_LIFE = 'end_of_life',
+  DISCONTINUED = 'discontinued',
+  STALE = 'stale',
+  UNKNOWN = 'unknown',
+}
+
+/**
+ * Severity level for notifications
+ */
+export enum NotificationSeverity {
+  INFO = 'info',
+  WARNING = 'warning',
+  ERROR = 'error',
+  CRITICAL = 'critical',
+}
+
+/**
+ * Analysis result for a single product release
+ */
+export interface ProductVersionInfo {
+  product: string;
+  release: string;
+  status: EolStatus;
+  eolDate: string | null;
+  daysUntilEol: number | null;
+  releaseDate: string | null;
+  latestVersion: string | null;
+  isLts: boolean;
+  supportDate: string | null;
+  link: string | null;
+  discontinuedDate: string | null;
+  isDiscontinued: boolean;
+  extendedSupportDate: string | null;
+  hasExtendedSupport: boolean;
+  latestReleaseDate: string | null;
+  daysSinceLatestRelease: number | null;
+  rawData: Release;
+}
+
+/**
+ * Comprehensive results of the EOL analysis
+ */
+export interface ActionResults {
+  eolDetected: boolean;
+  approachingEol: boolean;
+  staleDetected: boolean;
+  discontinuedDetected: boolean;
+  totalProductsChecked: number;
+  totalReleasesChecked: number;
+  products: ProductVersionInfo[];
+  eolProducts: ProductVersionInfo[];
+  approachingEolProducts: ProductVersionInfo[];
+  staleProducts: ProductVersionInfo[];
+  discontinuedProducts: ProductVersionInfo[];
+  extendedSupportProducts: ProductVersionInfo[];
+  latestVersions: Record<string, string>;
+  summary: string;
+  matrix?: MatrixOutput;
+  matrixInclude?: MatrixIncludeOutput;
+}
+
+/**
+ * Matrix output for GitHub Actions runner
  */
 export interface MatrixOutput {
   versions: string[];
@@ -108,7 +197,7 @@ export interface MatrixOutput {
 
 export interface MatrixIncludeItem {
   version: string;
-  cycle: string;
+  release: string;
   isLts: boolean;
   eolDate: string | null;
   status: string;
@@ -120,11 +209,11 @@ export interface MatrixIncludeOutput {
 }
 
 /**
- * Schema for action inputs
+ * Configuration for the GitHub Action
  */
 export const ActionInputsSchema = z.object({
   products: z.string(),
-  cycles: z.string(),
+  releases: z.string(),
   checkEol: z.boolean(),
   eolThresholdDays: z.number().int().positive(),
   failOnEol: z.boolean(),
@@ -141,99 +230,58 @@ export const ActionInputsSchema = z.object({
   includeLatestVersion: z.boolean(),
   includeSupportInfo: z.boolean(),
   customApiUrl: z.string().url(),
-  // File extraction inputs
   filePath: z.string(),
   fileKey: z.string(),
-  fileFormat: z.enum(['yaml', 'json', 'text']),
+  fileFormat: z.enum(['yaml', 'json', 'text', 'auto']),
   versionRegex: z.string(),
   version: z.string(),
-  // SBOM inputs
-  sbomFile: z.string(),
-  sbomFormat: z.enum(['cyclonedx', 'spdx', 'auto']),
-  sbomComponentMapping: z.string(),
+  minReleaseDate: z.string().optional(),
+  maxReleaseDate: z.string().optional(),
+  maxVersions: z.number().nullable(),
+  versionSortOrder: z.enum(['newest-first', 'oldest-first']),
   semanticVersionFallback: z.boolean(),
-  // Matrix output inputs
   outputMatrix: z.boolean(),
   excludeEolFromMatrix: z.boolean(),
   excludeApproachingEolFromMatrix: z.boolean(),
-  apiConcurrency: z.number().int().min(1).max(10),
-  // Filtering inputs
-  minReleaseDate: z.string(),
-  maxReleaseDate: z.string(),
-  maxVersions: z.number().int().positive().optional().nullable(),
-  versionSortOrder: z.enum(['newest-first', 'oldest-first']),
-  filterByCategory: z.string().optional(),
-  filterByTag: z.string().optional(),
+  apiConcurrency: z.number().int().positive(),
+  failOnNotificationFailure: z.boolean(),
+  notificationRetryAttempts: z.number().int().nonnegative(),
+  notificationRetryDelay: z.number().int().nonnegative(),
+  webhookUrl: z.string().optional(),
+  webhookMinSeverity: z.nativeEnum(NotificationSeverity),
+  webhookCustomHeaders: z.string().optional(),
+  webhookPayloadTemplate: z.string().optional(),
+  teamsUrl: z.string().optional(),
+  teamsMinSeverity: z.nativeEnum(NotificationSeverity),
+  googleChatUrl: z.string().optional(),
+  googleChatMinSeverity: z.nativeEnum(NotificationSeverity),
+  discordUrl: z.string().optional(),
+  discordMinSeverity: z.nativeEnum(NotificationSeverity),
+  discordUsername: z.string().optional(),
+  discordAvatarUrl: z.string().optional(),
+  slackUrl: z.string().optional(),
+  slackMinSeverity: z.nativeEnum(NotificationSeverity),
+  slackChannel: z.string().optional(),
+  slackUsername: z.string().optional(),
+  slackIconEmoji: z.string().optional(),
+  slackIconUrl: z.string().optional(),
+  // SBOM
+  sbomFile: z.string().optional(),
+  sbomFormat: z.enum(['cyclonedx', 'spdx', 'auto']).optional(),
+  sbomComponentMapping: z.string().optional(),
 });
 
 export type ActionInputs = z.infer<typeof ActionInputsSchema>;
 
 /**
- * EOL Status enumeration
- */
-export enum EolStatus {
-  ACTIVE = 'active',
-  APPROACHING_EOL = 'approaching_eol',
-  END_OF_LIFE = 'end_of_life',
-  UNKNOWN = 'unknown',
-}
-
-/**
- * Product version information
- */
-export interface ProductVersionInfo {
-  product: string;
-  cycle: string;
-  status: EolStatus;
-  eolDate: string | null;
-  daysUntilEol: number | null;
-  releaseDate: string | null;
-  latestVersion: string | null;
-  isLts: boolean;
-  supportDate: string | null;
-  link: string | null;
-  // Extended fields for additional tracking
-  discontinuedDate: string | null;
-  isDiscontinued: boolean;
-  extendedSupportDate: string | null;
-  hasExtendedSupport: boolean;
-  latestReleaseDate: string | null;
-  daysSinceLatestRelease: number | null;
-  rawData: Cycle;
-}
-
-/**
- * Action results
- */
-export interface ActionResults {
-  eolDetected: boolean;
-  approachingEol: boolean;
-  staleDetected: boolean;
-  discontinuedDetected: boolean;
-  totalProductsChecked: number;
-  totalCyclesChecked: number;
-  products: ProductVersionInfo[];
-  eolProducts: ProductVersionInfo[];
-  approachingEolProducts: ProductVersionInfo[];
-  staleProducts: ProductVersionInfo[];
-  discontinuedProducts: ProductVersionInfo[];
-  extendedSupportProducts: ProductVersionInfo[];
-  latestVersions: Record<string, string>;
-  summary: string;
-  // Matrix outputs
-  matrix?: MatrixOutput;
-  matrixInclude?: MatrixIncludeOutput;
-}
-
-/**
- * API Error
+ * Custom error for API-related issues
  */
 export class EndOfLifeApiError extends Error {
   constructor(
     message: string,
     public statusCode?: number,
     public product?: string,
-    public cycle?: string
+    public release?: string
   ) {
     super(message);
     this.name = 'EndOfLifeApiError';
@@ -241,7 +289,7 @@ export class EndOfLifeApiError extends Error {
 }
 
 /**
- * Validation Error
+ * Custom error for input validation issues
  */
 export class ValidationError extends Error {
   constructor(

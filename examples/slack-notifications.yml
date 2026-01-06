@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check EOL Status
-        uses: broadsage/endoflife-action@v3
+        uses: broadsage/endoflife-action@v4
         with:
           # Products to track
           products: 'python,nodejs,postgresql'

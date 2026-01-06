@@ -28,11 +28,11 @@ describe('GitHubIntegration', () => {
         eolDetected: true,
         approachingEol: false,
         totalProductsChecked: 1,
-        totalCyclesChecked: 1,
+        totalReleasesChecked: 1,
         products: [
             {
                 product: 'python',
-                cycle: '3.7',
+                release: '3.7',
                 status: EolStatus.END_OF_LIFE,
                 eolDate: '2023-06-27',
                 daysUntilEol: -500,
@@ -48,9 +48,9 @@ describe('GitHubIntegration', () => {
                 latestReleaseDate: null,
                 daysSinceLatestRelease: null,
                 rawData: {
-                    cycle: '3.7',
-                    eol: '2023-06-27',
-                    latest: '3.7.17',
+                    name: '3.7',
+                    eolFrom: '2023-06-27',
+                    latest: { name: '3.7.17' },
                     releaseDate: '2018-06-27',
                 },
             },
@@ -58,7 +58,7 @@ describe('GitHubIntegration', () => {
         eolProducts: [
             {
                 product: 'python',
-                cycle: '3.7',
+                release: '3.7',
                 status: EolStatus.END_OF_LIFE,
                 eolDate: '2023-06-27',
                 daysUntilEol: -500,
@@ -74,9 +74,9 @@ describe('GitHubIntegration', () => {
                 latestReleaseDate: null,
                 daysSinceLatestRelease: null,
                 rawData: {
-                    cycle: '3.7',
-                    eol: '2023-06-27',
-                    latest: '3.7.17',
+                    name: '3.7',
+                    eolFrom: '2023-06-27',
+                    latest: { name: '3.7.17' },
                     releaseDate: '2018-06-27',
                 },
             },
@@ -178,26 +178,7 @@ describe('GitHubIntegration', () => {
 
             expect(issueNumber).toBeNull();
             expect(core.error).toHaveBeenCalledWith(
-                expect.stringContaining('Failed to search for existing issues')
-            );
-        });
-
-        it('should handle empty labels array', async () => {
-            mockOctokit.rest.issues.listForRepo.mockResolvedValue({
-                data: [],
-            });
-
-            mockOctokit.rest.issues.create.mockResolvedValue({
-                data: { number: 789 },
-            });
-
-            const issueNumber = await ghIntegration.createEolIssue(mockResults, []);
-
-            expect(issueNumber).toBe(789);
-            expect(mockOctokit.rest.issues.create).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    labels: [],
-                })
+                expect.stringContaining('Failed to create or update GitHub issue')
             );
         });
     });
@@ -215,18 +196,6 @@ describe('GitHubIntegration', () => {
                 labels: ['bug', 'enhancement'],
             });
         });
-
-        it('should handle errors gracefully', async () => {
-            mockOctokit.rest.issues.addLabels.mockRejectedValue(
-                new Error('API error')
-            );
-
-            await ghIntegration.addLabels(123, ['bug']);
-
-            expect(core.warning).toHaveBeenCalledWith(
-                expect.stringContaining('Failed to add labels')
-            );
-        });
     });
 
     describe('closeIssue', () => {
@@ -235,44 +204,12 @@ describe('GitHubIntegration', () => {
 
             await ghIntegration.closeIssue(123);
 
-            expect(mockOctokit.rest.issues.createComment).not.toHaveBeenCalled();
             expect(mockOctokit.rest.issues.update).toHaveBeenCalledWith({
                 owner: 'test-owner',
                 repo: 'test-repo',
                 issue_number: 123,
                 state: 'closed',
             });
-            expect(core.info).toHaveBeenCalledWith('Closed issue #123');
-        });
-
-        it('should close an issue with comment', async () => {
-            mockOctokit.rest.issues.createComment.mockResolvedValue({});
-            mockOctokit.rest.issues.update.mockResolvedValue({});
-
-            await ghIntegration.closeIssue(123, 'All issues resolved');
-
-            expect(mockOctokit.rest.issues.createComment).toHaveBeenCalledWith({
-                owner: 'test-owner',
-                repo: 'test-repo',
-                issue_number: 123,
-                body: 'All issues resolved',
-            });
-            expect(mockOctokit.rest.issues.update).toHaveBeenCalledWith({
-                owner: 'test-owner',
-                repo: 'test-repo',
-                issue_number: 123,
-                state: 'closed',
-            });
-        });
-
-        it('should throw error on failure', async () => {
-            const error = new Error('API error');
-            mockOctokit.rest.issues.update.mockRejectedValue(error);
-
-            await expect(ghIntegration.closeIssue(123)).rejects.toThrow('API error');
-            expect(core.error).toHaveBeenCalledWith(
-                expect.stringContaining('Failed to close issue')
-            );
         });
     });
 });

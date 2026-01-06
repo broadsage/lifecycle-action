@@ -166,7 +166,8 @@ Get statistics about your SBOM:
 
 - name: Display statistics
   run: |
-    echo "Total components: $(jq '.totalProductsChecked' eol-analysis.json)"
+    echo "Total products: $(jq '.totalProductsChecked' eol-analysis.json)"
+    echo "Total releases: $(jq '.totalReleasesChecked' eol-analysis.json)"
     echo "EOL detected: $(jq '.eolDetected' eol-analysis.json)"
 ```
 

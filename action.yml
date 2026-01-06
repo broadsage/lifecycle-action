@@ -10,10 +10,14 @@ inputs:
     description: 'Comma-separated list of products to track (e.g., "python,nodejs,ubuntu"). Use "all" to fetch all products.'
     required: true
   
-  cycles:
-    description: 'JSON object mapping products to specific cycles to track (e.g., {"python": ["3.11", "3.12"], "nodejs": ["20", "21"]}). Leave empty to track all cycles.'
+  releases:
+    description: 'JSON object mapping products to specific releases to track (e.g., {"python": ["3.11", "3.12"], "nodejs": ["20", "21"]}). Leave empty to track all releases.'
     required: false
     default: '{}'
+  
+  cycles:
+    description: 'Alias for "releases" (deprecated, use "releases" instead)'
+    required: false
   
   check-eol:
     description: 'Check if any tracked versions are end-of-life'
@@ -173,7 +177,7 @@ inputs:
     default: ''
   
   max-versions:
-    description: 'Maximum number of versions to check per product'
+    description: 'Maximum number of releases to check per product'
     required: false
     default: ''
   
@@ -286,8 +290,8 @@ outputs:
   total-products-checked:
     description: 'Total number of products checked'
   
-  total-cycles-checked:
-    description: 'Total number of cycles checked'
+  total-releases-checked:
+    description: 'Total number of releases checked'
   
   matrix:
     description: 'JSON matrix for GitHub Actions (format: { "versions": [...] })'

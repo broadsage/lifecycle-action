@@ -21,7 +21,7 @@ jest.mock('fs/promises');
 describe('Output Formatting', () => {
     const mockProduct: ProductVersionInfo = {
         product: 'python',
-        cycle: '2.7',
+        release: '2.7',
         status: EolStatus.END_OF_LIFE,
         eolDate: '2020-01-01',
         daysUntilEol: -1800,
@@ -37,10 +37,10 @@ describe('Output Formatting', () => {
         latestReleaseDate: null,
         daysSinceLatestRelease: null,
         rawData: {
-            cycle: '2.7',
+            name: '2.7',
             releaseDate: '2010-07-03',
-            eol: '2020-01-01',
-            latest: '2.7.18',
+            eolFrom: '2020-01-01',
+            latest: { name: '2.7.18' },
         },
     };
 
@@ -50,7 +50,7 @@ describe('Output Formatting', () => {
         staleDetected: false,
         discontinuedDetected: false,
         totalProductsChecked: 1,
-        totalCyclesChecked: 1,
+        totalReleasesChecked: 1,
         products: [mockProduct],
         eolProducts: [mockProduct],
         approachingEolProducts: [],
@@ -90,7 +90,7 @@ describe('Output Formatting', () => {
         it('should include EOL products table', () => {
             const result = formatAsMarkdown(mockResults);
 
-            expect(result).toContain('| Product | Cycle | EOL Date');
+            expect(result).toContain('| Product | Release | EOL Date');
             expect(result).toContain('| python | 2.7 | 2020-01-01');
         });
 
@@ -132,7 +132,7 @@ describe('Output Formatting', () => {
             const activeProduct: ProductVersionInfo = {
                 ...mockProduct,
                 status: EolStatus.ACTIVE,
-                cycle: '3.11',
+                release: '3.11',
                 eolDate: '2027-10-24',
                 daysUntilEol: 1000,
             };
@@ -166,7 +166,7 @@ describe('Output Formatting', () => {
         it('should include stale versions section', () => {
             const staleProduct: ProductVersionInfo = {
                 ...mockProduct,
-                cycle: '3.6',
+                release: '3.6',
                 latestReleaseDate: '2018-12-24',
                 daysSinceLatestRelease: 1800,
             };
@@ -187,7 +187,7 @@ describe('Output Formatting', () => {
         it('should include discontinued products section', () => {
             const discontinuedProduct: ProductVersionInfo = {
                 ...mockProduct,
-                cycle: '10.0',
+                release: '10.0',
                 isDiscontinued: true,
                 discontinuedDate: '2023-01-01',
             };
@@ -220,7 +220,7 @@ describe('Output Formatting', () => {
             const approachingProduct: ProductVersionInfo = {
                 ...mockProduct,
                 status: EolStatus.APPROACHING_EOL,
-                cycle: '3.9',
+                release: '3.9',
                 daysUntilEol: 45,
                 eolDate: '2025-02-15',
             };
@@ -271,7 +271,7 @@ describe('Output Formatting', () => {
         it('should include stale versions information', () => {
             const staleProduct: ProductVersionInfo = {
                 ...mockProduct,
-                cycle: '3.6',
+                release: '3.6',
                 latestReleaseDate: '2018-12-24',
                 daysSinceLatestRelease: 1800,
             };
@@ -291,7 +291,7 @@ describe('Output Formatting', () => {
         it('should include discontinued products information', () => {
             const discontinuedProduct: ProductVersionInfo = {
                 ...mockProduct,
-                cycle: '10.0',
+                release: '10.0',
                 isDiscontinued: true,
                 discontinuedDate: '2023-01-01',
             };
@@ -314,7 +314,7 @@ describe('Output Formatting', () => {
             const activeProduct: ProductVersionInfo = {
                 ...mockProduct,
                 status: EolStatus.ACTIVE,
-                cycle: '3.11',
+                release: '3.11',
             };
 
             const results: ActionResults = {
@@ -333,7 +333,7 @@ describe('Output Formatting', () => {
             const activeProduct: ProductVersionInfo = {
                 ...mockProduct,
                 status: EolStatus.ACTIVE,
-                cycle: '3.11',
+                release: '3.11',
             };
 
             const results: ActionResults = {
@@ -352,13 +352,13 @@ describe('Output Formatting', () => {
             const activeProduct: ProductVersionInfo = {
                 ...mockProduct,
                 status: EolStatus.ACTIVE,
-                cycle: '3.11',
+                release: '3.11',
             };
 
             const approachingProduct: ProductVersionInfo = {
                 ...mockProduct,
                 status: EolStatus.APPROACHING_EOL,
-                cycle: '3.9',
+                release: '3.9',
             };
 
             const results: ActionResults = {
@@ -389,7 +389,7 @@ describe('Output Formatting', () => {
             const activeProduct: ProductVersionInfo = {
                 ...mockProduct,
                 status: EolStatus.ACTIVE,
-                cycle: '3.11',
+                release: '3.11',
                 eolDate: '2027-10-24',
                 releaseDate: '2022-10-24',
                 isLts: true,
@@ -405,7 +405,7 @@ describe('Output Formatting', () => {
             expect(matrix.include).toHaveLength(1);
             expect(matrix.include[0]).toEqual({
                 version: '3.11',
-                cycle: '3.11',
+                release: '3.11',
                 isLts: true,
                 eolDate: '2027-10-24',
                 status: EolStatus.ACTIVE,
@@ -417,7 +417,7 @@ describe('Output Formatting', () => {
             const activeProduct: ProductVersionInfo = {
                 ...mockProduct,
                 status: EolStatus.ACTIVE,
-                cycle: '3.11',
+                release: '3.11',
                 eolDate: '2027-10-24',
                 releaseDate: '2022-10-24',
                 isLts: false,
@@ -431,14 +431,14 @@ describe('Output Formatting', () => {
             const matrix = generateMatrixInclude(results);
 
             expect(matrix.include).toHaveLength(1);
-            expect(matrix.include[0].cycle).toBe('3.11');
+            expect(matrix.include[0].release).toBe('3.11');
         });
 
         it('should exclude approaching EOL when specified', () => {
             const activeProduct: ProductVersionInfo = {
                 ...mockProduct,
                 status: EolStatus.ACTIVE,
-                cycle: '3.11',
+                release: '3.11',
                 eolDate: '2027-10-24',
                 releaseDate: '2022-10-24',
                 isLts: false,
@@ -447,7 +447,7 @@ describe('Output Formatting', () => {
             const approachingProduct: ProductVersionInfo = {
                 ...mockProduct,
                 status: EolStatus.APPROACHING_EOL,
-                cycle: '3.9',
+                release: '3.9',
                 eolDate: '2025-02-01',
                 releaseDate: '2020-10-05',
                 isLts: false,
@@ -461,7 +461,7 @@ describe('Output Formatting', () => {
             const matrix = generateMatrixInclude(results, true, true);
 
             expect(matrix.include).toHaveLength(1);
-            expect(matrix.include[0].cycle).toBe('3.11');
+            expect(matrix.include[0].release).toBe('3.11');
         });
 
         it('should handle empty products list', () => {
@@ -493,7 +493,7 @@ describe('Output Formatting', () => {
             expect(core.setOutput).toHaveBeenCalledWith('latest-versions', JSON.stringify(mockResults.latestVersions));
             expect(core.setOutput).toHaveBeenCalledWith('summary', 'Test summary');
             expect(core.setOutput).toHaveBeenCalledWith('total-products-checked', 1);
-            expect(core.setOutput).toHaveBeenCalledWith('total-cycles-checked', 1);
+            expect(core.setOutput).toHaveBeenCalledWith('total-releases-checked', 1);
             expect(core.setOutput).toHaveBeenCalledWith('stale-detected', false);
             expect(core.setOutput).toHaveBeenCalledWith('stale-products', JSON.stringify([]));
             expect(core.setOutput).toHaveBeenCalledWith('discontinued-detected', false);
@@ -519,7 +519,7 @@ describe('Output Formatting', () => {
                     include: [
                         {
                             version: '3.11',
-                            cycle: '3.11',
+                            release: '3.11',
                             isLts: true,
                             eolDate: '2027-10-24',
                             status: EolStatus.ACTIVE,
@@ -594,6 +594,7 @@ describe('Output Formatting', () => {
 
         it('should throw and log error on failure', async () => {
             const error = new Error('Permission denied');
+            mockWriteFile.mockResolvedValue(undefined); // Reset
             mockWriteFile.mockRejectedValue(error);
 
             await expect(writeToFile('/tmp/test.json', 'content')).rejects.toThrow('Permission denied');

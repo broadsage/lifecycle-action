@@ -25,7 +25,7 @@ Never miss an End-of-Life date again. Automatically track 380+ software products
 ### Basic EOL Check
 
 ```yaml
-- uses: broadsage/endoflife-action@v3
+- uses: broadsage/endoflife-action@v4
   with:
     products: 'python,nodejs,postgresql'
     fail-on-eol: true
@@ -34,7 +34,7 @@ Never miss an End-of-Life date again. Automatically track 380+ software products
 ### With Slack Notifications
 
 ```yaml
-- uses: broadsage/endoflife-action@v3
+- uses: broadsage/endoflife-action@v4
   with:
     products: 'python,nodejs'
     slack-webhook-url: ${{ secrets.SLACK_WEBHOOK }}
@@ -45,7 +45,7 @@ Never miss an End-of-Life date again. Automatically track 380+ software products
 ### Multi-Channel Notifications
 
 ```yaml
-- uses: broadsage/endoflife-action@v3
+- uses: broadsage/endoflife-action@v4
   with:
     products: 'python,nodejs,postgresql'
     slack-webhook-url: ${{ secrets.SLACK_WEBHOOK }}
@@ -64,7 +64,7 @@ jobs:
     outputs:
       matrix: ${{ steps.eol.outputs.matrix }}
     steps:
-      - uses: broadsage/endoflife-action@v3
+      - uses: broadsage/endoflife-action@v4
         id: eol
         with:
           products: 'python'
@@ -92,7 +92,7 @@ jobs:
 | Input                       | Description                                              | Default      |
 | --------------------------- | -------------------------------------------------------- | ------------ |
 | `products`                  | Comma-separated list of products (e.g., "python,nodejs") | **Required** |
-| `cycles`                    | JSON object mapping products to specific cycles          | `{}`         |
+| `releases`                  | JSON object mapping products to specific releases        | `{}`         |
 | `check-eol`                 | Check if any tracked versions are end-of-life            | `true`       |
 | `fail-on-eol`               | Fail workflow if EOL detected                            | `false`      |
 | `fail-on-approaching-eol`   | Fail if version approaching EOL                          | `false`      |
@@ -137,12 +137,12 @@ jobs:
 <details>
 <summary><b>Filtering & Sorting</b></summary>
 
-| Input                | Description                                  | Default        |
+| Input                | Description                                  | DefaultSource |
 | -------------------- | -------------------------------------------- | -------------- |
 | `min-release-date`   | Minimum release date (YYYY-MM-DD or YYYY)    | `''`           |
 | `max-release-date`   | Maximum release date (YYYY-MM-DD or YYYY)    | `''`           |
-| `max-versions`       | Maximum number of versions to check          | `''`           |
-| `version-sort-order` | Sort order: `newest-first` or `oldest-first` | `newest-first` |
+| `max-versions`       | Maximum number of releases to check          | `''`           |
+| `version-sort-order` | Sort order for versions: `newest-first` or `oldest-first` | `newest-first` |
 | `filter-by-category` | Filter products by category (e.g. `os`)      | `''`           |
 | `filter-by-tag`      | Filter products by tag (e.g. `linux`)        | `''`           |
 
@@ -193,7 +193,7 @@ jobs:
 | `latest-versions`           | JSON object mapping products to latest versions                     |
 | `summary`                   | Human-readable summary                                              |
 | `total-products-checked`    | Total number of products checked                                    |
-| `total-cycles-checked`      | Total number of cycles checked                                      |
+| `total-releases-checked`    | Total number of releases checked                                    |
 | `matrix`                    | Version matrix for GitHub Actions (format: `{ "versions": [...] }`) |
 | `matrix-include`            | Detailed matrix with metadata (format: `{ "include": [...] }`)      |
 | `stale-detected`            | Boolean indicating if stale versions detected                       |

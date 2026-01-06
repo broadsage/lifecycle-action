@@ -4,6 +4,11 @@ This directory contains complete, ready-to-use workflow examples for the Broadsa
 
 ## Notification Examples
 
+### [Basic EOL Check](basic-eol-check.yml)
+Simple daily check for multiple products with failure on EOL.
+
+---
+
 ### [Slack Notifications](slack-notifications.yml)
 Send EOL alerts to Slack channels using webhooks.
 
@@ -49,6 +54,16 @@ Send MessageCard notifications to Teams channels.
 
 ---
 
+### [Google Chat Notifications](multi-channel-notifications.yml)
+Send notifications to Google Chat spaces.
+
+**Features:**
+- Card-based messages with icons
+- Support for repository information
+- Link to workflow run
+
+---
+
 ### [Multi-Channel Notifications](multi-channel-notifications.yml)
 Send notifications to multiple platforms simultaneously.
 
@@ -89,13 +104,13 @@ Integrate with any webhook endpoint using standardized JSON payload.
 
 ## Other Examples
 
-### [Version Extraction](extract-from-file.yml)
-Extract versions from package.json, Dockerfile, or other files.
+### [Version Extraction from package.json](package-json.yml)
+Extract dependencies from `package.json` and check their EOL status.
 
-**Supported Formats:**
-- YAML (package.json, docker-compose.yml)
-- JSON (package.json, composer.json)
-- Text (Dockerfile, requirements.txt)
+---
+
+### [Version Extraction with Regex](dockerfile-regex.yml)
+Extract versions from any file using custom regular expressions.
 
 ---
 
@@ -105,19 +120,23 @@ Auto-generate test matrices for multi-version testing.
 **Features:**
 - Exclude EOL versions automatically
 - Filter by release date
-- Limit number of versions
+- Limit number of releases
 - Custom sort order
 
 ---
 
-### [Scheduled EOL Check](scheduled-eol-check.yml)
-Weekly monitoring with comprehensive reporting.
+### [SBOM Integration](sbom-integration.md)
+Check all components in a Software Bill of Materials (SBOM) for EOL status.
 
-**Features:**
-- Scheduled runs (cron)
-- Multiple output formats
-- Artifact upload
-- Issue creation
+---
+
+### [Staleness Detection](staleness-detection.yml)
+Detect versions that haven't received updates within a threshold.
+
+---
+
+### [Hardware EOL](hardware-eol-tracking.yml)
+Track hardware devices like iPhone, Pixel, or Kindle for EOL.
 
 ---
 

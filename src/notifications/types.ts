@@ -121,7 +121,7 @@ export interface NotificationResult {
 export interface TemplateVariables {
   repository: string;
   totalProducts: number;
-  totalCycles: number;
+  totalReleases: number;
   eolCount: number;
   approachingEolCount: number;
   activeCount: number;
@@ -129,7 +129,7 @@ export interface TemplateVariables {
   timestamp: string;
   products: Array<{
     product: string;
-    cycle: string;
+    release: string;
     status: string;
     eolDate: string | null;
     daysUntilEol: number | null;

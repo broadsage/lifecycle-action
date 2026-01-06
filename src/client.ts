@@ -5,19 +5,15 @@ import * as core from '@actions/core';
 import { HttpClient } from '@actions/http-client';
 import { z } from 'zod';
 import {
-  Cycle,
-  CycleSchema,
-  AllProducts,
-  ProductSummary,
-  ProductSummarySchema,
-  FullProduct,
+  Release,
+  ReleaseSchema,
   FullProductSchema,
-  StringList,
-  StringListSchema,
   IdentifierList,
   IdentifierListSchema,
   EndOfLifeApiError,
   ValidationError,
+  AllProductsSchema,
+  ProductSummarySchema,
 } from './types';
 import { cleanVersion, getSemanticFallbacks } from './utils/version-utils';
 import { getErrorMessage, handleClientError } from './utils/error-utils';
@@ -114,19 +110,20 @@ export class EndOfLifeClient {
         );
       }
 
-      let data: any = JSON.parse(body);
+      const data: any = JSON.parse(body);
+      let finalData = data;
 
-      // Handle v1 API wrapper (result field)
+      // Unpack v1 response if it's wrapped
       if (
         data &&
         typeof data === 'object' &&
-        'result' in data &&
-        'schema_version' in data
+        'schema_version' in data &&
+        'result' in data
       ) {
-        data = data.result;
+        finalData = data.result;
       }
 
-      const validated = schema.parse(data);
+      const validated = schema.parse(finalData);
       this.setCache(cacheKey, validated);
 
       return validated;
@@ -147,89 +144,136 @@ export class EndOfLifeClient {
    * Get all available products
    * API v1: GET /products
    */
-  async getAllProducts(): Promise<AllProducts> {
+  async getAllProducts(): Promise<string[]> {
     const url = `${this.baseUrl}/products`;
-    // v1 API returns an array of product objects with name, label, etc.
-    // We need to extract just the names for backward compatibility
-    const response = await this.request(
-      url,
-      z.array(
-        z.object({
-          name: z.string(),
-          label: z.string().optional(),
-          category: z.string().optional(),
-        })
-      )
-    );
+    const response = await this.request(url, AllProductsSchema);
     return response.map((p) => p.name);
   }
 
   /**
-   * Get all release cycles for a product
+   * Get all release information for a product
    * API v1: GET /products/{product}
-   * Returns the full product object including releases array
    */
-  async getProductCycles(product: string): Promise<Cycle[]> {
+  async getProductReleases(product: string): Promise<Release[]> {
     const url = `${this.baseUrl}/products/${product}`;
     try {
-      const response = await this.request(
-        url,
-        z.object({
-          name: z.string(),
-          label: z.string().optional(),
-          releases: z.array(CycleSchema),
-        })
-      );
+      const response = await this.request(url, FullProductSchema);
       return response.releases;
     } catch (error) {
       handleClientError(error, { product });
+      return [];
     }
   }
 
   /**
-   * Get a specific release cycle for a product
+   * Get a specific release for a product
    * API v1: GET /products/{product}/releases/{release}
    */
-  async getProductCycle(product: string, cycle: string): Promise<Cycle> {
-    // v1 API uses 'releases' instead of cycles, but the cycle name remains the same
-    // URL-encode the cycle to handle special characters like slashes
-    const encodedCycle = encodeURIComponent(cycle);
-    const url = `${this.baseUrl}/products/${product}/releases/${encodedCycle}`;
+  async getProductRelease(product: string, release: string): Promise<Release> {
+    const encodedRelease = encodeURIComponent(release);
+    const url = `${this.baseUrl}/products/${product}/releases/${encodedRelease}`;
 
     try {
-      return await this.request(url, CycleSchema);
+      return await this.request(url, ReleaseSchema);
     } catch (error) {
-      handleClientError(error, { product, cycle });
+      handleClientError(error, { product, release });
+      throw error;
     }
   }
 
   /**
-   * Get cycle info with semantic version fallback
-   * Tries version patterns: 1.2.3 → 1.2 → 1
+   * Get release info with semantic version fallback
    */
-  async getCycleInfoWithFallback(
+  async getReleaseInfoWithFallback(
     product: string,
     version: string,
     enableFallback: boolean
-  ): Promise<Cycle | null> {
+  ): Promise<Release | null> {
     const versions = enableFallback
       ? getSemanticFallbacks(version)
       : [cleanVersion(version)];
 
     for (const v of versions) {
       try {
-        core.debug(`Trying to fetch release info for ${product}/${v}`);
-        const info = await this.getProductCycle(product, v);
-        if (info) {
-          core.info(`✓ Matched ${product} version ${version} to release ${v}`);
-          return info;
-        }
+        const info = await this.getProductRelease(product, v);
+        if (info) return info;
       } catch (error) {
         core.debug(`No release found for ${product}/${v}`);
       }
     }
 
     return null;
+  }
+
+  /**
+   * Get full data for all products
+   * API v1: GET /products/full
+   */
+  async getProductsFullData(): Promise<any[]> {
+    const url = `${this.baseUrl}/products/full`;
+    return await this.request(url, z.array(z.any()));
+  }
+
+  /**
+   * Get the latest release for a product
+   * API v1: GET /products/{product}/releases/latest
+   */
+  async getLatestRelease(product: string): Promise<Release> {
+    const url = `${this.baseUrl}/products/${product}/releases/latest`;
+    try {
+      return await this.request(url, ReleaseSchema);
+    } catch (error) {
+      handleClientError(error, { product });
+      throw error;
+    }
+  }
+
+  /**
+   * Get all available categories
+   */
+  async getCategories(): Promise<string[]> {
+    const url = `${this.baseUrl}/categories`;
+    return await this.request(url, z.array(z.string()));
+  }
+
+  /**
+   * Get all products in a specific category
+   */
+  async getProductsByCategory(category: string): Promise<any[]> {
+    const url = `${this.baseUrl}/categories/${category}`;
+    return await this.request(url, z.array(ProductSummarySchema));
+  }
+
+  /**
+   * Get all available tags
+   */
+  async getTags(): Promise<string[]> {
+    const url = `${this.baseUrl}/tags`;
+    return await this.request(url, z.array(z.string()));
+  }
+
+  /**
+   * Get all products with a specific tag
+   */
+  async getProductsByTag(tag: string): Promise<any[]> {
+    const url = `${this.baseUrl}/tags/${tag}`;
+    return await this.request(url, z.array(ProductSummarySchema));
+  }
+
+  /**
+   * Get all identifier types
+   */
+  async getIdentifierTypes(): Promise<string[]> {
+    const url = `${this.baseUrl}/identifiers`;
+    return await this.request(url, z.array(z.string()));
+  }
+
+  /**
+   * Get all identifiers for a specific type
+   */
+  async getIdentifiersByType(identifierType: string): Promise<IdentifierList> {
+    const url = `${this.baseUrl}/identifiers/${identifierType}`;
+    return await this.request(url, IdentifierListSchema);
   }
 
   /**
@@ -247,87 +291,5 @@ export class EndOfLifeClient {
       size: this.cache.size,
       keys: Array.from(this.cache.keys()),
     };
-  }
-
-  /**
-   * Get full data for all products (bulk dump)
-   * API v1: GET /products/full
-   * Warning: This endpoint returns a large amount of data
-   */
-  async getProductsFullData(): Promise<FullProduct[]> {
-    const url = `${this.baseUrl}/products/full`;
-    return await this.request(url, z.array(FullProductSchema));
-  }
-
-  /**
-   * Get the latest release cycle for a product
-   * API v1: GET /products/{product}/releases/latest
-   */
-  async getLatestRelease(product: string): Promise<Cycle> {
-    const url = `${this.baseUrl}/products/${product}/releases/latest`;
-    try {
-      return await this.request(url, CycleSchema);
-    } catch (error) {
-      handleClientError(error, { product });
-    }
-  }
-
-  /**
-   * Get all available categories
-   * API v1: GET /categories
-   */
-  async getCategories(): Promise<StringList> {
-    const url = `${this.baseUrl}/categories`;
-    return await this.request(url, StringListSchema);
-  }
-
-  /**
-   * Get all products in a specific category
-   * API v1: GET /categories/{category}
-   */
-  async getProductsByCategory(category: string): Promise<ProductSummary[]> {
-    const url = `${this.baseUrl}/categories/${category}`;
-    return await this.request(url, z.array(ProductSummarySchema));
-  }
-
-  /**
-   * Get all available tags
-   * API v1: GET /tags
-   */
-  async getTags(): Promise<StringList> {
-    const url = `${this.baseUrl}/tags`;
-    return await this.request(url, StringListSchema);
-  }
-
-  /**
-   * Get all products with a specific tag
-   * API v1: GET /tags/{tag}
-   */
-  async getProductsByTag(tag: string): Promise<ProductSummary[]> {
-    const url = `${this.baseUrl}/tags/${tag}`;
-    return await this.request(url, z.array(ProductSummarySchema));
-  }
-
-  /**
-   * Get all identifier types (e.g., purl, cpe)
-   * API v1: GET /identifiers
-   */
-  async getIdentifierTypes(): Promise<StringList> {
-    const url = `${this.baseUrl}/identifiers`;
-    return await this.request(url, StringListSchema);
-  }
-
-  /**
-   * Get all identifiers for a specific type
-   * API v1: GET /identifiers/{identifier_type}
-   * @param identifierType - Type of identifier (e.g., 'purl', 'cpe')
-   * @returns List of identifiers with their associated products
-   * @example
-   * const purls = await client.getIdentifiersByType('purl');
-   * // Returns: [{ identifier: 'pkg:npm/express@4.17.1', product: 'nodejs' }, ...]
-   */
-  async getIdentifiersByType(identifierType: string): Promise<IdentifierList> {
-    const url = `${this.baseUrl}/identifiers/${identifierType}`;
-    return await this.request(url, IdentifierListSchema);
   }
 }

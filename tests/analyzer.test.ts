@@ -3,7 +3,7 @@
 
 import { EolAnalyzer } from '../src/analyzer';
 import { EndOfLifeClient } from '../src/client';
-import { EolStatus, Cycle } from '../src/types';
+import { EolStatus, Release } from '../src/types';
 import nock from 'nock';
 
 // Mock p-limit as it's ESM only and causes issues with Jest
@@ -16,10 +16,10 @@ jest.mock('p-limit', () => {
 describe('EolAnalyzer', () => {
     let client: EndOfLifeClient;
     let analyzer: EolAnalyzer;
-    const baseUrl = 'https://endoflife.date';
+    const baseUrl = 'https://endoflife.date/api/v1';
 
     beforeEach(() => {
-        client = new EndOfLifeClient(`${baseUrl}/api/v1`, 3600);
+        client = new EndOfLifeClient(baseUrl, 3600);
         analyzer = new EolAnalyzer(client, 90);
         nock.cleanAll();
     });
@@ -28,41 +28,39 @@ describe('EolAnalyzer', () => {
         nock.cleanAll();
     });
 
-    describe('analyzeProductCycle', () => {
+    describe('analyzeProductRelease', () => {
         it('should identify end-of-life versions', async () => {
-            const cycle: Cycle = {
-                cycle: '2.7',
+            const release: Release = {
+                name: '2.7',
                 releaseDate: '2010-07-03',
-                eol: '2020-01-01',
-                latest: '2.7.18',
-                lts: false,
+                eolFrom: '2020-01-01',
+                latest: { name: '2.7.18' },
+                isLts: false,
             };
 
-            const result = await analyzer.analyzeProductCycle('python', cycle);
+            const result = await analyzer.analyzeProductRelease('python', release);
 
             expect(result.status).toBe(EolStatus.END_OF_LIFE);
             expect(result.product).toBe('python');
-            expect(result.cycle).toBe('2.7');
-            // EOL date should be 2020-01-01 or 2019-12-31 depending on timezone
+            expect(result.release).toBe('2.7');
             expect(result.eolDate).toMatch(/^(2019-12-31|2020-01-01)$/);
             expect(result.daysUntilEol).toBeLessThan(0);
         });
 
         it('should identify versions approaching EOL', async () => {
-            // Create a date 30 days in the future
             const futureDate = new Date();
             futureDate.setDate(futureDate.getDate() + 30);
             const eolDate = futureDate.toISOString().split('T')[0];
 
-            const cycle: Cycle = {
-                cycle: '3.9',
+            const release: Release = {
+                name: '3.9',
                 releaseDate: '2020-10-05',
-                eol: eolDate,
-                latest: '3.9.18',
-                lts: false,
+                eolFrom: eolDate,
+                latest: { name: '3.9.18' },
+                isLts: false,
             };
 
-            const result = await analyzer.analyzeProductCycle('python', cycle);
+            const result = await analyzer.analyzeProductRelease('python', release);
 
             expect(result.status).toBe(EolStatus.APPROACHING_EOL);
             expect(result.daysUntilEol).toBeGreaterThan(0);
@@ -70,75 +68,75 @@ describe('EolAnalyzer', () => {
         });
 
         it('should identify active versions', async () => {
-            // Create a date 365 days in the future
             const futureDate = new Date();
             futureDate.setDate(futureDate.getDate() + 365);
             const eolDate = futureDate.toISOString().split('T')[0];
 
-            const cycle: Cycle = {
-                cycle: '3.12',
+            const release: Release = {
+                name: '3.12',
                 releaseDate: '2023-10-02',
-                eol: eolDate,
-                latest: '3.12.1',
-                lts: false,
+                eolFrom: eolDate,
+                latest: { name: '3.12.1' },
+                isLts: false,
             };
 
-            const result = await analyzer.analyzeProductCycle('python', cycle);
+            const result = await analyzer.analyzeProductRelease('python', release);
 
             expect(result.status).toBe(EolStatus.ACTIVE);
             expect(result.daysUntilEol).toBeGreaterThan(90);
         });
 
         it('should handle boolean EOL values', async () => {
-            const activeCycle: Cycle = {
-                cycle: '3.13',
+            const activeRelease: Release = {
+                name: '3.13',
                 releaseDate: '2024-10-01',
-                eol: true, // Still supported
-                latest: '3.13.0',
+                eolFrom: false,
+                isEol: false,
+                latest: { name: '3.13.0' },
             };
 
-            const result = await analyzer.analyzeProductCycle('python', activeCycle);
+            const result = await analyzer.analyzeProductRelease('python', activeRelease);
 
             expect(result.status).toBe(EolStatus.ACTIVE);
             expect(result.eolDate).toBeNull();
         });
 
         it('should identify LTS versions', async () => {
-            const ltsCycle: Cycle = {
-                cycle: '20.04',
+            const ltsRelease: Release = {
+                name: '20.04',
                 releaseDate: '2020-04-23',
-                eol: '2025-04-02',
-                latest: '20.04.6',
-                lts: true,
+                eolFrom: '2025-04-02',
+                latest: { name: '20.04.6' },
+                isLts: true,
             };
 
-            const result = await analyzer.analyzeProductCycle('ubuntu', ltsCycle);
+            const result = await analyzer.analyzeProductRelease('ubuntu', ltsRelease);
 
             expect(result.isLts).toBe(true);
         });
 
         it('should handle LTS as date string', async () => {
-            const ltsCycle: Cycle = {
-                cycle: '14',
+            const ltsRelease: Release = {
+                name: '14',
                 releaseDate: '2019-09-23',
-                eol: '2029-09-30',
-                latest: '14.11.0',
-                lts: '2021-10-26',
+                eolFrom: '2029-09-30',
+                latest: { name: '14.11.0' },
+                ltsFrom: '2021-10-26',
             };
 
-            const result = await analyzer.analyzeProductCycle('nodejs', ltsCycle);
+            const result = await analyzer.analyzeProductRelease('nodejs', ltsRelease);
 
             expect(result.isLts).toBe(true);
         });
 
         it('should identify discontinued products', async () => {
-            const discontinuedCycle: Cycle = {
-                cycle: '1.0',
+            const discontinuedRelease: Release = {
+                name: '1.0',
                 discontinued: '2020-01-01',
-                latest: '1.0.5',
+                latest: { name: '1.0.5' },
             };
 
-            const result = await analyzer.analyzeProductCycle('app', discontinuedCycle);
+            const result = await analyzer.analyzeProductRelease('app', discontinuedRelease);
 
             expect(result.isDiscontinued).toBe(true);
             expect(result.discontinuedDate).toMatch(/^(2019-12-31|2020-01-01)$/);
@@ -146,227 +144,110 @@ describe('EolAnalyzer', () => {
 
         it('should calculate days since latest release correctly', async () => {
             const lastReleaseDate = '2023-01-01';
-            const cycle: Cycle = {
-                cycle: '3.0',
-                latestReleaseDate: lastReleaseDate,
-                latest: '3.0.1',
+            const release: Release = {
+                name: '3.0',
+                latest: {
+                    name: '3.0.1',
+                    date: lastReleaseDate,
+                }
             };
 
-            const result = await analyzer.analyzeProductCycle('app', cycle);
+            const result = await analyzer.analyzeProductRelease('app', release);
 
             expect(result.latestReleaseDate).toBe(lastReleaseDate);
             expect(result.daysSinceLatestRelease).toBeGreaterThan(0);
         });
     });
 
-    describe('analyzeProduct', () => {
-        it('should analyze all cycles of a product', async () => {
-            const mockCycles = [
-                {
-                    cycle: '3.11',
-                    releaseDate: '2022-10-24',
-                    eol: '2027-10-24',
-                    latest: '3.11.7',
-                    lts: false,
-                },
-                {
-                    cycle: '2.7',
-                    releaseDate: '2010-07-03',
-                    eol: '2020-01-01',
-                    latest: '2.7.18',
-                    lts: false,
-                },
-            ];
-
-            nock(baseUrl)
-                .get('/api/v1/products/python')
-                .reply(200, {
-                    schema_version: '1.2.0',
-                    result: {
-                        name: 'python',
-                        label: 'Python',
-                        releases: mockCycles,
-                    },
-                });
-
-            const results = await analyzer.analyzeProduct('python');
-
-            expect(results).toHaveLength(2);
-            expect(results[0].cycle).toBe('3.11');
-            expect(results[1].cycle).toBe('2.7');
-            expect(results[1].status).toBe(EolStatus.END_OF_LIFE);
-        });
-
-        it('should filter to specific cycles when provided', async () => {
-            const mockCycles = [
-                {
-                    cycle: '3.11',
-                    releaseDate: '2022-10-24',
-                    eol: '2027-10-24',
-                    latest: '3.11.7',
-                },
-                {
-                    cycle: '3.10',
-                    releaseDate: '2021-10-04',
-                    eol: '2026-10-04',
-                    latest: '3.10.13',
-                },
-                {
-                    cycle: '2.7',
-                    releaseDate: '2010-07-03',
-                    eol: '2020-01-01',
-                    latest: '2.7.18',
-                },
-            ];
-
-            nock(baseUrl)
-                .get('/api/v1/products/python')
-                .reply(200, {
-                    schema_version: '1.2.0',
-                    result: {
-                        name: 'python',
-                        label: 'Python',
-                        releases: mockCycles,
-                    },
-                });
-
-            const results = await analyzer.analyzeProduct('python', ['3.11', '3.10']);
-
-            expect(results).toHaveLength(2);
-            expect(results.map((r) => r.cycle)).toEqual(['3.11', '3.10']);
-        });
-    });
-
-    describe('analyzeProducts', () => {
+    describe('analyzeMany', () => {
         it('should analyze multiple products', async () => {
-            const pythonCycles = [
+            const pythonReleases = [
                 {
-                    cycle: '3.11',
+                    name: '3.11',
                     releaseDate: '2022-10-24',
-                    eol: '2027-10-24',
-                    latest: '3.11.7',
+                    eolFrom: '2027-10-24',
+                    latest: { name: '3.11.7' },
                 },
             ];
 
-            const nodejsCycles = [
+            const nodejsReleases = [
                 {
-                    cycle: '20',
+                    name: '20',
                     releaseDate: '2023-04-18',
-                    eol: '2026-04-30',
-                    latest: '20.10.0',
+                    eolFrom: '2026-04-30',
+                    latest: { name: '20.10.0' },
                 },
             ];
 
-            nock(baseUrl)
+            nock('https://endoflife.date')
                 .get('/api/v1/products/python')
                 .reply(200, {
                     schema_version: '1.2.0',
-                    result: {
-                        name: 'python',
-                        label: 'Python',
-                        releases: pythonCycles,
-                    },
-                });
-
-            nock(baseUrl)
+                    result: { name: 'python', releases: pythonReleases }
+                })
                 .get('/api/v1/products/nodejs')
                 .reply(200, {
                     schema_version: '1.2.0',
-                    result: {
-                        name: 'nodejs',
-                        label: 'Node.js',
-                        releases: nodejsCycles,
-                    },
+                    result: { name: 'nodejs', releases: nodejsReleases }
                 });
 
-            const results = await analyzer.analyzeProducts(['python', 'nodejs']);
+            const results = await analyzer.analyzeMany(['python', 'nodejs'], {});
 
             expect(results.totalProductsChecked).toBe(2);
-            expect(results.totalCyclesChecked).toBe(2);
-            expect(results.products).toHaveLength(2);
+            expect(results.totalReleasesChecked).toBe(2);
+            expect(results.eolDetected).toBe(false);
+        });
+
+        it('should handle product-specific versions from releasesMap', async () => {
+            const pythonReleases = [
+                {
+                    name: '3.11',
+                    releaseDate: '2022-10-24',
+                    eolFrom: '2027-10-24',
+                    latest: { name: '3.11.7' },
+                },
+                {
+                    name: '2.7',
+                    releaseDate: '2010-07-03',
+                    eolFrom: '2020-01-01',
+                    latest: { name: '2.7.18' },
+                },
+            ];
+
+            nock('https://endoflife.date')
+                .get('/api/v1/products/python')
+                .reply(200, {
+                    schema_version: '1.2.0',
+                    result: { name: 'python', releases: pythonReleases }
+                });
+
+            const results = await analyzer.analyzeMany(['python'], { python: ['3.11'] });
+
+            expect(results.totalReleasesChecked).toBe(1);
+            expect(results.products[0].release).toBe('3.11');
         });
 
         it('should generate summary correctly', async () => {
-            const mockCycles = [
+            const mockReleases = [
                 {
-                    cycle: '2.7',
+                    name: '2.7',
                     releaseDate: '2010-07-03',
-                    eol: '2020-01-01',
-                    latest: '2.7.18',
+                    eolFrom: '2020-01-01',
+                    latest: { name: '2.7.18' },
                 },
             ];
 
-            nock(baseUrl)
+            nock('https://endoflife.date')
                 .get('/api/v1/products/python')
                 .reply(200, {
-                    name: 'python',
-                    label: 'Python',
-                    releases: mockCycles,
+                    schema_version: '1.2.0',
+                    result: { name: 'python', releases: mockReleases }
                 });
 
-            const results = await analyzer.analyzeProducts(['python']);
+            const results = await analyzer.analyzeMany(['python'], {});
 
-            expect(results.summary).toContain('End-of-Life Detected');
+            expect(results.summary).toContain('Analyzed 1 releases for 1 products');
             expect(results.eolDetected).toBe(true);
-            expect(results.eolProducts).toHaveLength(1);
-        });
-
-        it('should handle product-specific cycles', async () => {
-            const pythonCycles = [
-                {
-                    cycle: '3.11',
-                    releaseDate: '2022-10-24',
-                    eol: '2027-10-24',
-                    latest: '3.11.7',
-                },
-                {
-                    cycle: '3.10',
-                    releaseDate: '2021-10-04',
-                    eol: '2026-10-04',
-                    latest: '3.10.13',
-                },
-            ];
-
-            nock(baseUrl)
-                .get('/api/v1/products/python')
-                .reply(200, {
-                    name: 'python',
-                    label: 'Python',
-                    releases: pythonCycles,
-                });
-
-            const cyclesMap = {
-                python: ['3.11'],
-            };
-
-            const results = await analyzer.analyzeProducts(['python'], cyclesMap);
-
-            expect(results.totalCyclesChecked).toBe(1);
-            expect(results.products[0].cycle).toBe('3.11');
-        });
-
-        it('should extract latest versions', async () => {
-            const mockCycles = [
-                {
-                    cycle: '3.11',
-                    releaseDate: '2022-10-24',
-                    eol: '2027-10-24',
-                    latest: '3.11.7',
-                },
-            ];
-
-            nock(baseUrl)
-                .get('/api/v1/products/python')
-                .reply(200, {
-                    name: 'python',
-                    label: 'Python',
-                    releases: mockCycles,
-                });
-
-            const results = await analyzer.analyzeProducts(['python']);
-
-            expect(results.latestVersions).toHaveProperty('python');
-            expect(results.latestVersions.python).toBe('3.11.7');
         });
     });
 });

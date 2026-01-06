@@ -25,7 +25,7 @@ jobs:
       
       - name: Check EOL status
         id: eol-check
-        uses: broadsage/endoflife-action@v1
+        uses: broadsage/endoflife-action@v4
         with:
           products: 'python,nodejs,postgresql,redis,nginx,ubuntu'
           eol-threshold-days: 90

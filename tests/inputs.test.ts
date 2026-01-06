@@ -4,10 +4,10 @@
 import {
     getInputs,
     parseProducts,
-    parseCycles,
+    parseReleases,
     validateInputs,
 } from '../src/inputs';
-import { ActionInputs } from '../src/types';
+import { ActionInputs, NotificationSeverity } from '../src/types';
 import * as core from '@actions/core';
 
 // Mock @actions/core
@@ -24,7 +24,7 @@ describe('Input Parsing and Validation', () => {
             mockCore.getInput.mockImplementation((name: string) => {
                 const defaults: Record<string, string> = {
                     'products': 'python,nodejs',
-                    'cycles': '{}',
+                    'releases': '{}',
                     'eol-threshold-days': '90',
                     'staleness-threshold-days': '365',
                     'output-format': 'summary',
@@ -69,7 +69,7 @@ describe('Input Parsing and Validation', () => {
             const inputs = getInputs();
 
             expect(inputs.products).toBe('python,nodejs');
-            expect(inputs.cycles).toBe('{}');
+            expect(inputs.releases).toBe('{}');
             expect(inputs.checkEol).toBe(true);
             expect(inputs.eolThresholdDays).toBe(90);
             expect(inputs.stalenessThresholdDays).toBe(365);
@@ -120,6 +120,17 @@ describe('Input Parsing and Validation', () => {
             const inputs = getInputs();
             expect(inputs.apiConcurrency).toBe(5);
         });
+
+        it('should support cycles as an alias for releases', () => {
+            mockCore.getInput.mockImplementation((name: string) => {
+                if (name === 'cycles') return '{"python": ["3.11"]}';
+                if (name === 'releases') return '';
+                return '';
+            });
+
+            const inputs = getInputs();
+            expect(inputs.releases).toBe('{"python": ["3.11"]}');
+        });
     });
 
     describe('parseProducts', () => {
@@ -159,10 +170,10 @@ describe('Input Parsing and Validation', () => {
         });
     });
 
-    describe('parseCycles', () => {
-        it('should parse valid JSON cycles', () => {
+    describe('parseReleases', () => {
+        it('should parse valid JSON releases', () => {
             const input = '{"python": ["3.11", "3.12"], "nodejs": ["20"]}';
-            const result = parseCycles(input);
+            const result = parseReleases(input);
 
             expect(result).toEqual({
                 python: ['3.11', '3.12'],
@@ -171,8 +182,8 @@ describe('Input Parsing and Validation', () => {
         });
 
         it('should return empty object for empty input', () => {
-            const result1 = parseCycles('');
-            const result2 = parseCycles('{}');
+            const result1 = parseReleases('');
+            const result2 = parseReleases('{}');
 
             expect(result1).toEqual({});
             expect(result2).toEqual({});
@@ -181,26 +192,26 @@ describe('Input Parsing and Validation', () => {
         it('should throw error for invalid JSON', () => {
             const input = '{invalid json}';
 
-            expect(() => parseCycles(input)).toThrow('Invalid cycles JSON');
+            expect(() => parseReleases(input)).toThrow('Invalid releases JSON');
         });
 
         it('should throw error for array input', () => {
             const input = '["python", "nodejs"]';
 
-            expect(() => parseCycles(input)).toThrow('Cycles must be a JSON object');
+            expect(() => parseReleases(input)).toThrow('Releases must be a JSON object');
         });
 
         it('should throw error for non-object input', () => {
             const input = '"string"';
 
-            expect(() => parseCycles(input)).toThrow('Cycles must be a JSON object');
+            expect(() => parseReleases(input)).toThrow('Releases must be a JSON object');
         });
     });
 
     describe('validateInputs', () => {
         const validInputs: ActionInputs = {
             products: 'python,nodejs',
-            cycles: '{}',
+            releases: '{}',
             checkEol: true,
             eolThresholdDays: 90,
             failOnEol: false,
@@ -236,6 +247,14 @@ describe('Input Parsing and Validation', () => {
             maxReleaseDate: '',
             maxVersions: null,
             versionSortOrder: 'newest-first',
+            failOnNotificationFailure: false,
+            notificationRetryAttempts: 3,
+            notificationRetryDelay: 1000,
+            webhookMinSeverity: NotificationSeverity.INFO,
+            teamsMinSeverity: NotificationSeverity.INFO,
+            googleChatMinSeverity: NotificationSeverity.INFO,
+            discordMinSeverity: NotificationSeverity.INFO,
+            slackMinSeverity: NotificationSeverity.INFO,
         };
 
         it('should validate correct inputs', () => {
@@ -282,16 +301,16 @@ describe('Input Parsing and Validation', () => {
             );
         });
 
-        it('should validate cycles JSON format', () => {
-            const inputs = { ...validInputs, cycles: '{invalid}' };
+        it('should validate releases JSON format', () => {
+            const inputs = { ...validInputs, releases: '{invalid}' };
 
-            expect(() => validateInputs(inputs)).toThrow('Invalid cycles input');
+            expect(() => validateInputs(inputs)).toThrow('Invalid releases input');
         });
 
-        it('should accept valid cycles JSON', () => {
+        it('should accept valid releases JSON', () => {
             const inputs = {
                 ...validInputs,
-                cycles: '{"python": ["3.11"]}',
+                releases: '{"python": ["3.11"]}',
             };
 
             expect(() => validateInputs(inputs)).not.toThrow();
@@ -358,25 +377,25 @@ describe('Input Parsing and Validation', () => {
             );
         });
 
-        it('should require file-path, version, or cycles for single product', () => {
+        it('should require file-path, version, or releases for single product', () => {
             const inputs = {
                 ...validInputs,
                 products: 'python',
-                cycles: '{}',
+                releases: '{}',
                 filePath: '',
                 version: '',
             };
 
             expect(() => validateInputs(inputs)).toThrow(
-                'For single product tracking, either file-path, version, or cycles must be specified'
+                'For single product tracking, either file-path, version, or releases must be specified'
             );
         });
 
-        it('should not require file-path/version/cycles for multiple products', () => {
+        it('should not require file-path/version/releases for multiple products', () => {
             const inputs = {
                 ...validInputs,
                 products: 'python,nodejs',
-                cycles: '{}',
+                releases: '{}',
                 filePath: '',
                 version: '',
             };
@@ -384,11 +403,11 @@ describe('Input Parsing and Validation', () => {
             expect(() => validateInputs(inputs)).not.toThrow();
         });
 
-        it('should not require file-path/version/cycles for "all" products', () => {
+        it('should not require file-path/version/releases for "all" products', () => {
             const inputs = {
                 ...validInputs,
                 products: 'all',
-                cycles: '{}',
+                releases: '{}',
                 filePath: '',
                 version: '',
             };

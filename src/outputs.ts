@@ -22,17 +22,17 @@ export function formatAsMarkdown(results: ActionResults): string {
   lines.push('# 📊 EndOfLife Analysis Report');
   lines.push('');
   lines.push(`**Total Products Checked:** ${results.totalProductsChecked}`);
-  lines.push(`**Total Cycles Checked:** ${results.totalCyclesChecked}`);
+  lines.push(`**Total Releases Checked:** ${results.totalReleasesChecked}`);
   lines.push('');
 
   if (results.eolProducts.length > 0) {
     lines.push('## ❌ End-of-Life Detected');
     lines.push('');
-    lines.push('| Product | Cycle | EOL Date | Latest Version | LTS |');
-    lines.push('|---------|-------|----------|----------------|-----|');
+    lines.push('| Product | Release | EOL Date | Latest Version | LTS |');
+    lines.push('|---------|---------|----------|----------------|-----|');
     for (const product of results.eolProducts) {
       lines.push(
-        `| ${product.product} | ${product.cycle} | ${product.eolDate || 'N/A'} | ${product.latestVersion || 'N/A'} | ${product.isLts ? '✓' : '✗'} |`
+        `| ${product.product} | ${product.release} | ${product.eolDate || 'N/A'} | ${product.latestVersion || 'N/A'} | ${product.isLts ? '✓' : '✗'} |`
       );
     }
     lines.push('');
@@ -42,14 +42,14 @@ export function formatAsMarkdown(results: ActionResults): string {
     lines.push('## ⚠️ Approaching End-of-Life');
     lines.push('');
     lines.push(
-      '| Product | Cycle | Days Until EOL | EOL Date | Latest Version | LTS |'
+      '| Product | Release | Days Until EOL | EOL Date | Latest Version | LTS |'
     );
     lines.push(
-      '|---------|-------|----------------|----------|----------------|-----|'
+      '|---------|---------|----------------|----------|----------------|-----|'
     );
     for (const product of results.approachingEolProducts) {
       lines.push(
-        `| ${product.product} | ${product.cycle} | ${product.daysUntilEol || 'N/A'} | ${product.eolDate || 'N/A'} | ${product.latestVersion || 'N/A'} | ${product.isLts ? '✓' : '✗'} |`
+        `| ${product.product} | ${product.release} | ${product.daysUntilEol || 'N/A'} | ${product.eolDate || 'N/A'} | ${product.latestVersion || 'N/A'} | ${product.isLts ? '✓' : '✗'} |`
       );
     }
     lines.push('');
@@ -58,11 +58,11 @@ export function formatAsMarkdown(results: ActionResults): string {
   if (results.staleProducts.length > 0) {
     lines.push('## ⏰ Stale Versions');
     lines.push('');
-    lines.push('| Product | Cycle | Last Release Date | Days Since Latest |');
-    lines.push('|---------|-------|-------------------|-------------------|');
+    lines.push('| Product | Release | Last Release Date | Days Since Latest |');
+    lines.push('|---------|---------|-------------------|-------------------|');
     for (const product of results.staleProducts) {
       lines.push(
-        `| ${product.product} | ${product.cycle} | ${product.latestReleaseDate || 'N/A'} | ${product.daysSinceLatestRelease || 'N/A'} |`
+        `| ${product.product} | ${product.release} | ${product.latestReleaseDate || 'N/A'} | ${product.daysSinceLatestRelease || 'N/A'} |`
       );
     }
     lines.push('');
@@ -71,11 +71,11 @@ export function formatAsMarkdown(results: ActionResults): string {
   if (results.discontinuedProducts.length > 0) {
     lines.push('## 🚫 Discontinued Products');
     lines.push('');
-    lines.push('| Product | Cycle | Discontinued Date |');
-    lines.push('|---------|-------|-------------------|');
+    lines.push('| Product | Release | Discontinued Date |');
+    lines.push('|---------|---------|-------------------|');
     for (const product of results.discontinuedProducts) {
       lines.push(
-        `| ${product.product} | ${product.cycle} | ${product.discontinuedDate || 'N/A'} |`
+        `| ${product.product} | ${product.release} | ${product.discontinuedDate || 'N/A'} |`
       );
     }
     lines.push('');
@@ -87,11 +87,11 @@ export function formatAsMarkdown(results: ActionResults): string {
   if (activeProducts.length > 0) {
     lines.push('## ✅ Active Support');
     lines.push('');
-    lines.push('| Product | Cycle | EOL Date | Latest Version | LTS |');
-    lines.push('|---------|-------|----------|----------------|-----|');
+    lines.push('| Product | Release | EOL Date | Latest Version | LTS |');
+    lines.push('|---------|---------|----------|----------------|-----|');
     for (const product of activeProducts) {
       lines.push(
-        `| ${product.product} | ${product.cycle} | ${product.eolDate || 'N/A'} | ${product.latestVersion || 'N/A'} | ${product.isLts ? '✓' : '✗'} |`
+        `| ${product.product} | ${product.release} | ${product.eolDate || 'N/A'} | ${product.latestVersion || 'N/A'} | ${product.isLts ? '✓' : '✗'} |`
       );
     }
     lines.push('');
@@ -156,8 +156,8 @@ export function generateMatrix(
     products = products.filter((p) => p.status !== EolStatus.APPROACHING_EOL);
   }
 
-  // Extract unique cycles/versions
-  const versions = products.map((p) => p.cycle);
+  // Extract unique releases/versions
+  const versions = products.map((p) => p.release);
 
   return { versions };
 }
@@ -172,7 +172,7 @@ export function generateMatrixInclude(
 ): {
   include: Array<{
     version: string;
-    cycle: string;
+    release: string;
     isLts: boolean;
     eolDate: string | null;
     status: string;
@@ -191,8 +191,8 @@ export function generateMatrixInclude(
 
   // Map to detailed matrix items
   const include = products.map((p) => ({
-    version: p.cycle,
-    cycle: p.cycle,
+    version: p.release,
+    release: p.release,
     isLts: p.isLts,
     eolDate: p.eolDate,
     status: p.status,
@@ -217,7 +217,7 @@ export function setOutputs(results: ActionResults): void {
   core.setOutput('latest-versions', JSON.stringify(results.latestVersions));
   core.setOutput('summary', results.summary);
   core.setOutput('total-products-checked', results.totalProductsChecked);
-  core.setOutput('total-cycles-checked', results.totalCyclesChecked);
+  core.setOutput('total-releases-checked', results.totalReleasesChecked);
   core.setOutput('stale-detected', results.staleDetected);
   core.setOutput('stale-products', JSON.stringify(results.staleProducts));
   core.setOutput('discontinued-detected', results.discontinuedDetected);
@@ -256,7 +256,7 @@ export function createIssueBody(results: ActionResults): string {
     lines.push('## ❌ End-of-Life Versions');
     lines.push('');
     for (const product of results.eolProducts) {
-      lines.push(`### ${product.product} ${product.cycle}`);
+      lines.push(`### ${product.product} ${product.release}`);
       lines.push('');
       lines.push(`- **EOL Date:** ${product.eolDate}`);
       lines.push(`- **Latest Version:** ${product.latestVersion || 'N/A'}`);
@@ -272,7 +272,7 @@ export function createIssueBody(results: ActionResults): string {
     lines.push('## ⚠️ Approaching End-of-Life');
     lines.push('');
     for (const product of results.approachingEolProducts) {
-      lines.push(`### ${product.product} ${product.cycle}`);
+      lines.push(`### ${product.product} ${product.release}`);
       lines.push('');
       lines.push(`- **Days Until EOL:** ${product.daysUntilEol}`);
       lines.push(`- **EOL Date:** ${product.eolDate}`);
@@ -289,7 +289,7 @@ export function createIssueBody(results: ActionResults): string {
     lines.push('## ⏰ Stale Versions');
     lines.push('');
     for (const product of results.staleProducts) {
-      lines.push(`### ${product.product} ${product.cycle}`);
+      lines.push(`### ${product.product} ${product.release}`);
       lines.push('');
       lines.push(
         `- **Days Since Latest Release:** ${product.daysSinceLatestRelease}`
@@ -306,7 +306,7 @@ export function createIssueBody(results: ActionResults): string {
     lines.push('## 🚫 Discontinued Products');
     lines.push('');
     for (const product of results.discontinuedProducts) {
-      lines.push(`### ${product.product} ${product.cycle}`);
+      lines.push(`### ${product.product} ${product.release}`);
       lines.push('');
       if (product.discontinuedDate) {
         lines.push(`- **Discontinued Date:** ${product.discontinuedDate}`);
