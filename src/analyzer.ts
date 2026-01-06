@@ -15,7 +15,7 @@ export class EolAnalyzer {
   constructor(
     private client: EndOfLifeClient,
     private eolThresholdDays: number
-  ) {}
+  ) { }
 
   /**
    * Parse date from various formats
@@ -202,12 +202,16 @@ export class EolAnalyzer {
   ): Promise<ActionResults> {
     const limit = pLimit(options.apiConcurrency || 5);
     const results: ProductVersionInfo[] = [];
+    const analysisErrors: { product: string; message: string }[] = [];
 
     const tasks = products.map((product) =>
       limit(async () => {
         try {
           const productReleases = await this.client.getProductReleases(product);
-          if (!productReleases || productReleases.length === 0) return;
+          if (!productReleases || productReleases.length === 0) {
+            core.debug(`No releases found for ${product}`);
+            return;
+          }
 
           let targetReleases = productReleases;
 
@@ -246,14 +250,22 @@ export class EolAnalyzer {
             results.push(this.analyzeProductRelease(product, release));
           }
         } catch (error) {
-          core.error(
-            `Failed to analyze product ${product}: ${getErrorMessage(error)}`
-          );
+          const message = getErrorMessage(error);
+          analysisErrors.push({ product, message });
         }
       })
     );
 
     await Promise.all(tasks);
+
+    // Report analysis errors together as per best practices
+    if (analysisErrors.length > 0) {
+      core.startGroup(`⚠️ Product Analysis Issues (${analysisErrors.length})`);
+      for (const err of analysisErrors) {
+        core.warning(`[${err.product}] ${err.message}`);
+      }
+      core.endGroup();
+    }
 
     return this.generateSummary(results);
   }

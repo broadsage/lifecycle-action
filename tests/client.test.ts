@@ -105,9 +105,8 @@ describe('EndOfLifeClient', () => {
                 .get('/api/v1/products/unknown-product')
                 .reply(404, 'Not Found');
 
-            await expect(
-                client.getProductReleases('unknown-product')
-            ).rejects.toThrow(EndOfLifeApiError);
+            const releases = await client.getProductReleases('unknown-product');
+            expect(releases).toEqual([]);
         });
     });
 

@@ -52,7 +52,7 @@ export abstract class BaseNotificationChannel implements INotificationChannel {
         return;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        core.warning(
+        core.info(
           `[${this.name}] Attempt ${attempt} failed: ${lastError.message}`
         );
 
@@ -98,16 +98,18 @@ export abstract class BaseNotificationChannel implements INotificationChannel {
    */
   validate(): boolean {
     if (!this.webhookUrl) {
-      core.info(`[${this.name}] Webhook URL is not configured`);
+      core.debug(`[${this.name}] Webhook URL is not configured (skipping)`);
       return false;
     }
 
     if (!SecurityUtils.isSafeUrl(this.webhookUrl)) {
-      core.info(
-        `[${this.name}] Blocked unsafe or private URL: ${this.webhookUrl}`
+      core.warning(
+        `[${this.name}] Blocked URL for security reasons: ${this.webhookUrl}. Webhooks must use HTTPS and public IP addresses.`
       );
       return false;
     }
+
+    core.debug(`[${this.name}] Webhook URL validated successfully`);
     return true;
   }
 

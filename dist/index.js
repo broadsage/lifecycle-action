@@ -55330,11 +55330,14 @@ class EolAnalyzer {
     async analyzeMany(products, releasesMap, options = {}) {
         const limit = (0, p_limit_1.default)(options.apiConcurrency || 5);
         const results = [];
+        const analysisErrors = [];
         const tasks = products.map((product) => limit(async () => {
             try {
                 const productReleases = await this.client.getProductReleases(product);
-                if (!productReleases || productReleases.length === 0)
+                if (!productReleases || productReleases.length === 0) {
+                    core.debug(`No releases found for ${product}`);
                     return;
+                }
                 let targetReleases = productReleases;
                 // Filter by explicit release versions if provided
                 if (releasesMap[product] && releasesMap[product].length > 0) {
@@ -55362,10 +55365,19 @@ class EolAnalyzer {
                 }
             }
             catch (error) {
-                core.error(`Failed to analyze product ${product}: ${(0, error_utils_1.getErrorMessage)(error)}`);
+                const message = (0, error_utils_1.getErrorMessage)(error);
+                analysisErrors.push({ product, message });
             }
         }));
         await Promise.all(tasks);
+        // Report analysis errors together as per best practices
+        if (analysisErrors.length > 0) {
+            core.startGroup(`⚠️ Product Analysis Issues (${analysisErrors.length})`);
+            for (const err of analysisErrors) {
+                core.warning(`[${err.product}] ${err.message}`);
+            }
+            core.endGroup();
+        }
         return this.generateSummary(results);
     }
     /**
@@ -55571,6 +55583,10 @@ class EndOfLifeClient {
             return response.releases;
         }
         catch (error) {
+            if (error instanceof types_1.EndOfLifeApiError && error.statusCode === 404) {
+                core.debug(`Product ${product} is not tracked by endoflife.date`);
+                return [];
+            }
             (0, error_utils_1.handleClientError)(error, { product });
             return [];
         }
@@ -56064,18 +56080,17 @@ async function run() {
                 combinedReleasesMap[product].push(version);
             }
         }
-        core.info(`Analyzing ${products.length} product(s)...`);
         // Initialize analyzer
         const analyzer = new analyzer_1.EolAnalyzer(client, inputs.eolThresholdDays);
         // Analyze products
-        const results = await analyzer.analyzeMany(products, combinedReleasesMap, {
+        const results = await core.group(`Analyzing ${products.length} product(s)...`, async () => (await analyzer.analyzeMany(products, combinedReleasesMap, {
             includeDiscontinued: inputs.includeDiscontinued,
             minReleaseDate: inputs.minReleaseDate,
             maxReleaseDate: inputs.maxReleaseDate,
             maxVersions: inputs.maxVersions,
             versionSortOrder: inputs.versionSortOrder,
             apiConcurrency: inputs.apiConcurrency,
-        });
+        })));
         // Generate matrix outputs if requested
         if (inputs.outputMatrix) {
             core.info('Generating matrix outputs...');
@@ -56581,7 +56596,7 @@ class BaseNotificationChannel {
             }
             catch (error) {
                 lastError = error instanceof Error ? error : new Error(String(error));
-                core.warning(`[${this.name}] Attempt ${attempt} failed: ${lastError.message}`);
+                core.info(`[${this.name}] Attempt ${attempt} failed: ${lastError.message}`);
                 if (attempt < this.retryAttempts) {
                     const delay = this.retryDelayMs * Math.pow(2, attempt - 1); // Exponential backoff
                     core.debug(`[${this.name}] Waiting ${delay}ms before retry...`);
@@ -56618,13 +56633,14 @@ class BaseNotificationChannel {
      */
     validate() {
         if (!this.webhookUrl) {
-            core.info(`[${this.name}] Webhook URL is not configured`);
+            core.debug(`[${this.name}] Webhook URL is not configured (skipping)`);
             return false;
         }
         if (!security_utils_1.SecurityUtils.isSafeUrl(this.webhookUrl)) {
-            core.info(`[${this.name}] Blocked unsafe or private URL: ${this.webhookUrl}`);
+            core.warning(`[${this.name}] Blocked URL for security reasons: ${this.webhookUrl}. Webhooks must use HTTPS and public IP addresses.`);
             return false;
         }
+        core.debug(`[${this.name}] Webhook URL validated successfully`);
         return true;
     }
     /**
@@ -57504,10 +57520,10 @@ class NotificationManager {
     addChannel(channel) {
         if (channel.validate()) {
             this.channels.push(channel);
-            core.info(`[NotificationManager] Added channel: ${channel.name}`);
+            core.debug(`[NotificationManager] Added channel: ${channel.name}`);
         }
         else {
-            core.warning(`[NotificationManager] Skipped invalid channel: ${channel.name}`);
+            core.debug(`[NotificationManager] Skipped channel during initialization: ${channel.name}`);
         }
     }
     /**
@@ -57527,36 +57543,37 @@ class NotificationManager {
             core.info('[NotificationManager] Skipping notifications based on filter criteria');
             return [];
         }
-        core.info(`[NotificationManager] Sending notifications to ${this.channels.length} channel(s)`);
         const notificationResults = [];
-        // Send to all channels in parallel
-        const promises = this.channels.map(async (channel) => {
-            const result = {
-                channel: channel.type,
-                success: false,
-                timestamp: new Date(),
-            };
-            try {
-                const message = channel.formatMessage(results);
-                await channel.send(message);
-                result.success = true;
-                core.info(`[NotificationManager] ✓ ${channel.name} notification sent`);
-            }
-            catch (error) {
-                result.error =
-                    error instanceof Error ? error : new Error(String(error));
-                core.error(`[NotificationManager] ✗ ${channel.name} notification failed: ${result.error.message}`);
-            }
-            return result;
-        });
-        const results_array = await Promise.allSettled(promises);
-        results_array.forEach((result) => {
-            if (result.status === 'fulfilled') {
-                notificationResults.push(result.value);
-            }
-            else {
-                core.error(`[NotificationManager] Unexpected error: ${result.reason}`);
-            }
+        await core.group(`Sending notifications to ${this.channels.length} channel(s)...`, async () => {
+            // Send to all channels in parallel
+            const promises = this.channels.map(async (channel) => {
+                const result = {
+                    channel: channel.type,
+                    success: false,
+                    timestamp: new Date(),
+                };
+                try {
+                    const message = channel.formatMessage(results);
+                    await channel.send(message);
+                    result.success = true;
+                    core.info(`✓ ${channel.name} notification sent`);
+                }
+                catch (error) {
+                    result.error =
+                        error instanceof Error ? error : new Error(String(error));
+                    core.error(`✗ ${channel.name} notification failed: ${result.error.message}`);
+                }
+                return result;
+            });
+            const results_array = await Promise.allSettled(promises);
+            results_array.forEach((result) => {
+                if (result.status === 'fulfilled') {
+                    notificationResults.push(result.value);
+                }
+                else {
+                    core.error(`Unexpected error: ${result.reason}`);
+                }
+            });
         });
         // Summary
         const successful = notificationResults.filter((r) => r.success).length;

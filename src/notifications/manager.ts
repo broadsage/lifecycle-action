@@ -27,10 +27,10 @@ export class NotificationManager {
   addChannel(channel: INotificationChannel): void {
     if (channel.validate()) {
       this.channels.push(channel);
-      core.info(`[NotificationManager] Added channel: ${channel.name}`);
+      core.debug(`[NotificationManager] Added channel: ${channel.name}`);
     } else {
-      core.warning(
-        `[NotificationManager] Skipped invalid channel: ${channel.name}`
+      core.debug(
+        `[NotificationManager] Skipped channel during initialization: ${channel.name}`
       );
     }
   }
@@ -57,45 +57,44 @@ export class NotificationManager {
       return [];
     }
 
-    core.info(
-      `[NotificationManager] Sending notifications to ${this.channels.length} channel(s)`
-    );
-
     const notificationResults: NotificationResult[] = [];
 
-    // Send to all channels in parallel
-    const promises = this.channels.map(async (channel) => {
-      const result: NotificationResult = {
-        channel: channel.type,
-        success: false,
-        timestamp: new Date(),
-      };
+    await core.group(
+      `Sending notifications to ${this.channels.length} channel(s)...`,
+      async () => {
+        // Send to all channels in parallel
+        const promises = this.channels.map(async (channel) => {
+          const result: NotificationResult = {
+            channel: channel.type,
+            success: false,
+            timestamp: new Date(),
+          };
 
-      try {
-        const message = channel.formatMessage(results);
-        await channel.send(message);
-        result.success = true;
-        core.info(`[NotificationManager] ✓ ${channel.name} notification sent`);
-      } catch (error) {
-        result.error =
-          error instanceof Error ? error : new Error(String(error));
-        core.error(
-          `[NotificationManager] ✗ ${channel.name} notification failed: ${result.error.message}`
-        );
+          try {
+            const message = channel.formatMessage(results);
+            await channel.send(message);
+            result.success = true;
+            core.info(`✓ ${channel.name} notification sent`);
+          } catch (error) {
+            result.error =
+              error instanceof Error ? error : new Error(String(error));
+            core.error(`✗ ${channel.name} notification failed: ${result.error.message}`);
+          }
+
+          return result;
+        });
+
+        const results_array = await Promise.allSettled(promises);
+
+        results_array.forEach((result) => {
+          if (result.status === 'fulfilled') {
+            notificationResults.push(result.value);
+          } else {
+            core.error(`Unexpected error: ${result.reason}`);
+          }
+        });
       }
-
-      return result;
-    });
-
-    const results_array = await Promise.allSettled(promises);
-
-    results_array.forEach((result) => {
-      if (result.status === 'fulfilled') {
-        notificationResults.push(result.value);
-      } else {
-        core.error(`[NotificationManager] Unexpected error: ${result.reason}`);
-      }
-    });
+    );
 
     // Summary
     const successful = notificationResults.filter((r) => r.success).length;

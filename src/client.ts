@@ -160,6 +160,10 @@ export class EndOfLifeClient {
       const response = await this.request(url, FullProductSchema);
       return response.releases;
     } catch (error) {
+      if (error instanceof EndOfLifeApiError && error.statusCode === 404) {
+        core.debug(`Product ${product} is not tracked by endoflife.date`);
+        return [];
+      }
       handleClientError(error, { product });
       return [];
     }

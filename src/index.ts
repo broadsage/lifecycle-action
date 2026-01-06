@@ -23,6 +23,7 @@ import {
   generateMatrix,
   generateMatrixInclude,
 } from './outputs';
+import { ActionResults } from './types';
 import {
   NotificationManager,
   NotificationChannelFactory,
@@ -198,20 +199,22 @@ async function run(): Promise<void> {
       }
     }
 
-    core.info(`Analyzing ${products.length} product(s)...`);
-
     // Initialize analyzer
     const analyzer = new EolAnalyzer(client, inputs.eolThresholdDays);
 
     // Analyze products
-    const results = await analyzer.analyzeMany(products, combinedReleasesMap, {
-      includeDiscontinued: inputs.includeDiscontinued,
-      minReleaseDate: inputs.minReleaseDate,
-      maxReleaseDate: inputs.maxReleaseDate,
-      maxVersions: inputs.maxVersions,
-      versionSortOrder: inputs.versionSortOrder,
-      apiConcurrency: inputs.apiConcurrency,
-    });
+    const results = await core.group(
+      `Analyzing ${products.length} product(s)...`,
+      async () =>
+        (await analyzer.analyzeMany(products, combinedReleasesMap, {
+          includeDiscontinued: inputs.includeDiscontinued,
+          minReleaseDate: inputs.minReleaseDate,
+          maxReleaseDate: inputs.maxReleaseDate,
+          maxVersions: inputs.maxVersions,
+          versionSortOrder: inputs.versionSortOrder,
+          apiConcurrency: inputs.apiConcurrency,
+        })) as ActionResults
+    );
 
     // Generate matrix outputs if requested
     if (inputs.outputMatrix) {
