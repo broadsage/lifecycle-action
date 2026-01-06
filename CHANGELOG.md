@@ -1,5 +1,24 @@
 # Changelog
 
+## [4.1.1](https://github.com/broadsage/endoflife-action/compare/v4.1.0...v4.1.1) (2026-01-06)
+
+
+### Bug Fixes
+
+* **api:** loosen schema for better product compatibility and cleanup CI logs ([4d0a994](https://github.com/broadsage/endoflife-action/commit/4d0a994be95acf324e681d56ac83a02509c6975a))
+* **inputs:** relax single-product validation and fix releases alias logic ([3bda1a5](https://github.com/broadsage/endoflife-action/commit/3bda1a50c9cc870f915a5e735dd9ae33c77e6342))
+
+
+### Code Refactoring
+
+* code formatted ([05a37d9](https://github.com/broadsage/endoflife-action/commit/05a37d984e45987072d7fd4d63917a4d111726a3))
+* code formatted with prettier ([7d1d208](https://github.com/broadsage/endoflife-action/commit/7d1d208b26a0bc358f93f83b6c93be229932abf0))
+
+
+### Miscellaneous
+
+* optimize workflow summary annotations and grouping ([425ada6](https://github.com/broadsage/endoflife-action/commit/425ada691b00fbee55f44d1babbdae202c6afbc4))
+
 ## [4.1.0](https://github.com/broadsage/endoflife-action/compare/v4.0.0...v4.1.0) (2026-01-06)
 
 
