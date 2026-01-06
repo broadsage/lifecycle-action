@@ -55169,7 +55169,7 @@ class EolAnalyzer {
      * Parse date from various formats
      */
     parseDate(value) {
-        if (!value || typeof value === 'boolean')
+        if (!value || typeof value === 'boolean' || typeof value === 'number')
             return null;
         try {
             const date = (0, date_fns_1.parseISO)(value);
@@ -55282,10 +55282,10 @@ class EolAnalyzer {
             eolDate: eolDate ? eolDate.toISOString().split('T')[0] : null,
             daysUntilEol: this.calculateDaysUntilEol(release),
             releaseDate: releaseDate ? releaseDate.toISOString().split('T')[0] : null,
-            latestVersion: release.latest?.name || null,
+            latestVersion: release.latest?.name ? String(release.latest.name) : null,
             isLts: this.isLts(release),
             supportDate: supportDate ? supportDate.toISOString().split('T')[0] : null,
-            link: release.link || null,
+            link: release.link ? String(release.link) : null,
             discontinuedDate: discontinuedDate
                 ? discontinuedDate.toISOString().split('T')[0]
                 : null,
@@ -55519,7 +55519,7 @@ class EndOfLifeClient {
                 const maxRetries = 3;
                 if (retryAttempt < maxRetries) {
                     const delay = Math.pow(2, retryAttempt) * 1000; // 1s, 2s, 4s
-                    core.warning(`Rate limited (429). Retrying in ${delay}ms (attempt ${retryAttempt + 1}/${maxRetries})...`);
+                    core.info(`Rate limited (429). Retrying in ${delay}ms (attempt ${retryAttempt + 1}/${maxRetries})...`);
                     await new Promise((resolve) => setTimeout(resolve, delay));
                     return this.request(url, schema, retryAttempt + 1);
                 }
@@ -56618,11 +56618,11 @@ class BaseNotificationChannel {
      */
     validate() {
         if (!this.webhookUrl) {
-            core.warning(`[${this.name}] Webhook URL is not configured`);
+            core.info(`[${this.name}] Webhook URL is not configured`);
             return false;
         }
         if (!security_utils_1.SecurityUtils.isSafeUrl(this.webhookUrl)) {
-            core.warning(`[${this.name}] Blocked unsafe or private URL: ${this.webhookUrl}`);
+            core.info(`[${this.name}] Blocked unsafe or private URL: ${this.webhookUrl}`);
             return false;
         }
         return true;
@@ -58074,7 +58074,7 @@ class SBOMParser {
     async parseCycloneDX(bom, customMapping = {}) {
         const components = new Map();
         if (!bom.components || bom.components.length === 0) {
-            core.warning('No components found in CycloneDX BOM');
+            core.info('No components found in CycloneDX BOM');
             return components;
         }
         // Recursively extract components
@@ -58119,7 +58119,7 @@ class SBOMParser {
     async parseSPDX(doc, customMapping = {}) {
         const components = new Map();
         if (!doc.packages || doc.packages.length === 0) {
-            core.warning('No packages found in SPDX document');
+            core.info('No packages found in SPDX document');
             return components;
         }
         for (const pkg of doc.packages) {
@@ -58332,30 +58332,32 @@ function createV1ResponseSchema(schema) {
  * Latest release version information
  */
 exports.LatestReleaseSchema = zod_1.z.object({
-    name: zod_1.z.string(),
-    date: zod_1.z.string().optional(),
-    link: zod_1.z.string().optional(),
+    name: zod_1.z.union([zod_1.z.string(), zod_1.z.number()]),
+    date: zod_1.z.union([zod_1.z.string(), zod_1.z.null()]).optional(),
+    link: zod_1.z.union([zod_1.z.string(), zod_1.z.null()]).optional(),
 });
 /**
  * Detailed information about a product release (v1 API)
  */
 exports.ReleaseSchema = zod_1.z.object({
     name: zod_1.z.union([zod_1.z.string(), zod_1.z.number()]),
-    codename: zod_1.z.string().nullable().optional(),
-    label: zod_1.z.string().optional(),
-    releaseDate: zod_1.z.string().optional(),
-    isLts: zod_1.z.boolean().optional(),
-    ltsFrom: zod_1.z.string().nullable().optional(),
-    isEoas: zod_1.z.boolean().optional(),
-    eoasFrom: zod_1.z.string().nullable().optional(),
-    isEol: zod_1.z.boolean().optional(),
-    eolFrom: zod_1.z.union([zod_1.z.string(), zod_1.z.boolean(), zod_1.z.null()]).optional(),
-    isEoes: zod_1.z.boolean().optional(),
-    eoesFrom: zod_1.z.string().nullable().optional(),
-    isMaintained: zod_1.z.boolean().optional(),
-    latest: exports.LatestReleaseSchema.optional(),
-    link: zod_1.z.string().nullable().optional(),
-    discontinued: zod_1.z.union([zod_1.z.string(), zod_1.z.boolean(), zod_1.z.null()]).optional(),
+    codename: zod_1.z.union([zod_1.z.string(), zod_1.z.null()]).optional(),
+    label: zod_1.z.union([zod_1.z.string(), zod_1.z.null()]).optional(),
+    releaseDate: zod_1.z.union([zod_1.z.string(), zod_1.z.null()]).optional(),
+    isLts: zod_1.z.union([zod_1.z.boolean(), zod_1.z.string(), zod_1.z.null()]).optional(),
+    ltsFrom: zod_1.z.union([zod_1.z.string(), zod_1.z.null()]).optional(),
+    isEoas: zod_1.z.union([zod_1.z.boolean(), zod_1.z.string(), zod_1.z.null()]).optional(),
+    eoasFrom: zod_1.z.union([zod_1.z.string(), zod_1.z.null()]).optional(),
+    isEol: zod_1.z.union([zod_1.z.boolean(), zod_1.z.string(), zod_1.z.null()]).optional(),
+    eolFrom: zod_1.z.union([zod_1.z.string(), zod_1.z.boolean(), zod_1.z.number(), zod_1.z.null()]).optional(),
+    isEoes: zod_1.z.union([zod_1.z.boolean(), zod_1.z.string(), zod_1.z.null()]).optional(),
+    eoesFrom: zod_1.z.union([zod_1.z.string(), zod_1.z.null()]).optional(),
+    isMaintained: zod_1.z.union([zod_1.z.boolean(), zod_1.z.string(), zod_1.z.null()]).optional(),
+    latest: exports.LatestReleaseSchema.optional().nullable(),
+    link: zod_1.z.union([zod_1.z.string(), zod_1.z.null()]).optional(),
+    discontinued: zod_1.z
+        .union([zod_1.z.string(), zod_1.z.boolean(), zod_1.z.number(), zod_1.z.null()])
+        .optional(),
 });
 /**
  * Product identifier (e.g., CPE, PURL)
@@ -58512,7 +58514,14 @@ exports.EndOfLifeApiError = EndOfLifeApiError;
 class ValidationError extends Error {
     errors;
     constructor(message, errors) {
-        super(message);
+        let detailedMessage = message;
+        if (errors) {
+            const details = errors.errors
+                .map((e) => `[${e.path.join('.')}] ${e.message}`)
+                .join(', ');
+            detailedMessage = `${message}: ${details}`;
+        }
+        super(detailedMessage);
         this.errors = errors;
         this.name = 'ValidationError';
     }

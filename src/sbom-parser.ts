@@ -78,7 +78,7 @@ interface SPDXDocument {
  * SBOM Parser class
  */
 export class SBOMParser {
-  constructor(private client?: EndOfLifeClient) { }
+  constructor(private client?: EndOfLifeClient) {}
 
   /**
    * Parse SBOM file and extract components

@@ -46,7 +46,9 @@ export const ReleaseSchema = z.object({
   isMaintained: z.union([z.boolean(), z.string(), z.null()]).optional(),
   latest: LatestReleaseSchema.optional().nullable(),
   link: z.union([z.string(), z.null()]).optional(),
-  discontinued: z.union([z.string(), z.boolean(), z.number(), z.null()]).optional(),
+  discontinued: z
+    .union([z.string(), z.boolean(), z.number(), z.null()])
+    .optional(),
 });
 
 export type Release = z.infer<typeof ReleaseSchema>;
