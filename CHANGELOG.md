@@ -1,5 +1,18 @@
 # Changelog
 
+## [4.1.2](https://github.com/broadsage/endoflife-action/compare/v4.1.1...v4.1.2) (2026-01-07)
+
+
+### Documentation
+
+* refactor action name, description, and README for modern look ([f1fb18d](https://github.com/broadsage/endoflife-action/commit/f1fb18d7c86adf83397aeee41b17e84c2084d016))
+
+
+### Miscellaneous
+
+* **deps:** update all non-major dependencies ([8d2f0b1](https://github.com/broadsage/endoflife-action/commit/8d2f0b1d9a749c8d7223dc685d20fa173b1b06f9))
+* **deps:** update all non-major dependencies ([8d2f0b1](https://github.com/broadsage/endoflife-action/commit/8d2f0b1d9a749c8d7223dc685d20fa173b1b06f9))
+
 ## [4.1.1](https://github.com/broadsage/endoflife-action/compare/v4.1.0...v4.1.1) (2026-01-06)
 
 
