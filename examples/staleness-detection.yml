@@ -20,7 +20,7 @@ jobs:
       
       - name: Check for stale versions
         id: stale-check
-        uses: broadsage/endoflife-action@v4
+        uses: broadsage/lifecycle-action@v4
         with:
           # Track critical dependencies
           products: 'python,nodejs,postgresql,redis,nginx'

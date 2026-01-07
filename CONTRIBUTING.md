@@ -1,6 +1,6 @@
-# Contributing to EndOfLife Action
+# Contributing to Software Lifecycle Tracker
 
-Thank you for your interest in contributing to the EndOfLife Action! This document provides guidelines and instructions for contributing.
+Thank you for your interest in contributing to the Software Lifecycle Tracker! This document provides guidelines and instructions for contributing.
 
 ## Code of Conduct
 
@@ -41,8 +41,8 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/endoflife-action.git
-cd endoflife-action
+git clone https://github.com/YOUR_USERNAME/lifecycle-action.git
+cd lifecycle-action
 
 # Install dependencies
 npm install

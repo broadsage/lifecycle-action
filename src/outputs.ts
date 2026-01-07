@@ -19,7 +19,7 @@ export function formatAsJson(results: ActionResults): string {
 export function formatAsMarkdown(results: ActionResults): string {
   const lines: string[] = [];
 
-  lines.push('# 📊 EndOfLife Analysis Report');
+  lines.push('# 📊 Software Lifecycle Analysis Report');
   lines.push('');
   lines.push(`**Total Products Checked:** ${results.totalProductsChecked}`);
   lines.push(`**Total Releases Checked:** ${results.totalReleasesChecked}`);
@@ -248,7 +248,7 @@ export function createIssueBody(results: ActionResults): string {
   lines.push('# 🚨 End-of-Life Software Detected');
   lines.push('');
   lines.push(
-    'This issue was automatically created by the EndOfLife Action because end-of-life software versions were detected.'
+    'This issue was automatically created by the Software Lifecycle Tracker because end-of-life software versions were detected.'
   );
   lines.push('');
 
@@ -326,7 +326,7 @@ export function createIssueBody(results: ActionResults): string {
   lines.push('---');
   lines.push('');
   lines.push(
-    '*This issue was created automatically by [EndOfLife Action](https://github.com/broadsage/endoflife-action)*'
+    '*This issue was created automatically by [Software Lifecycle Tracker](https://github.com/broadsage/lifecycle-action)*'
   );
 
   return lines.join('\n');

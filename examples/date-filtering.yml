@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check Python Versions from 2023
-        uses: broadsage/endoflife-action@v4
+        uses: broadsage/lifecycle-action@v4
         with:
           products: 'python'
           min-release-date: '>=2023'
@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check Node.js Versions Released Between 2022-2024
-        uses: broadsage/endoflife-action@v4
+        uses: broadsage/lifecycle-action@v4
         with:
           products: 'nodejs'
           min-release-date: '>=2022-01-01'
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check Latest 5 Versions from 2022
-        uses: broadsage/endoflife-action@v4
+        uses: broadsage/lifecycle-action@v4
         with:
           products: 'ubuntu'
           min-release-date: '>=2022'
@@ -65,7 +65,7 @@ jobs:
     steps:
       - name: Get Recent PostgreSQL Versions
         id: eol
-        uses: broadsage/endoflife-action@v4
+        uses: broadsage/lifecycle-action@v4
         with:
           products: 'postgresql'
           min-release-date: '>=2021'

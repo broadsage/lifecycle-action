@@ -28,7 +28,7 @@ jobs:
   check-eol:
     runs-on: ubuntu-latest
     steps:
-      - uses: broadsage/endoflife-action@v3
+      - uses: broadsage/lifecycle-action@v3
         with:
           products: 'python,nodejs,postgresql'
 ```
@@ -40,7 +40,7 @@ That's it! This will check Python, Node.js, and PostgreSQL for EOL status weekly
 Add automatic issue creation when EOL is detected:
 
 ```yaml
-- uses: broadsage/endoflife-action@v3
+- uses: broadsage/lifecycle-action@v3
   with:
     products: 'python,nodejs,postgresql'
     fail-on-eol: true
@@ -53,7 +53,7 @@ Add automatic issue creation when EOL is detected:
 Check if your specific versions are EOL:
 
 ```yaml
-- uses: broadsage/endoflife-action@v3
+- uses: broadsage/lifecycle-action@v3
   with:
     products: 'python'
     cycles: |
@@ -70,7 +70,7 @@ Check if your specific versions are EOL:
 ```yaml
 - uses: actions/checkout@v4
 
-- uses: broadsage/endoflife-action@v3
+- uses: broadsage/lifecycle-action@v3
   with:
     products: 'nodejs'
     file-path: 'package.json'
@@ -84,7 +84,7 @@ Check if your specific versions are EOL:
 ```yaml
 - uses: actions/checkout@v4
 
-- uses: broadsage/endoflife-action@v3
+- uses: broadsage/lifecycle-action@v3
   with:
     products: 'python'
     file-path: 'Dockerfile'
@@ -101,7 +101,7 @@ jobs:
     outputs:
       matrix: ${{ steps.eol.outputs.matrix }}
     steps:
-      - uses: broadsage/endoflife-action@v3
+      - uses: broadsage/lifecycle-action@v3
         id: eol
         with:
           products: 'python'
@@ -124,7 +124,7 @@ jobs:
 ### Use Case 4: Check Recent Versions Only
 
 ```yaml
-- uses: broadsage/endoflife-action@v3
+- uses: broadsage/lifecycle-action@v3
   with:
     products: 'nodejs'
     min-release-date: '>=2023'
@@ -137,7 +137,7 @@ jobs:
 ### JSON Output
 
 ```yaml
-- uses: broadsage/endoflife-action@v3
+- uses: broadsage/lifecycle-action@v3
   with:
     products: 'python'
     output-format: 'json'
@@ -152,7 +152,7 @@ jobs:
 ### Markdown Report
 
 ```yaml
-- uses: broadsage/endoflife-action@v3
+- uses: broadsage/lifecycle-action@v3
   with:
     products: 'python,nodejs'
     output-format: 'markdown'
@@ -175,7 +175,7 @@ jobs:
 ### GitHub Step Summary (Default)
 
 ```yaml
-- uses: broadsage/endoflife-action@v3
+- uses: broadsage/lifecycle-action@v3
   with:
     products: 'python'
     output-format: 'summary'  # Default
@@ -186,7 +186,7 @@ jobs:
 ### Minimal Configuration
 
 ```yaml
-- uses: broadsage/endoflife-action@v3
+- uses: broadsage/lifecycle-action@v3
   with:
     products: 'python'
 ```
@@ -194,7 +194,7 @@ jobs:
 ### Recommended Configuration
 
 ```yaml
-- uses: broadsage/endoflife-action@v3
+- uses: broadsage/lifecycle-action@v3
   with:
     products: 'python,nodejs'
     eol-threshold-days: 90
@@ -207,7 +207,7 @@ jobs:
 ### Advanced Configuration
 
 ```yaml
-- uses: broadsage/endoflife-action@v3
+- uses: broadsage/lifecycle-action@v3
   with:
     # Products to track
     products: 'python,nodejs,postgresql'
@@ -286,7 +286,7 @@ Use alongside Dependabot for automated updates:
 
 ```yaml
 # .github/workflows/eol-check.yml
-- uses: broadsage/endoflife-action@v3
+- uses: broadsage/lifecycle-action@v3
   with:
     products: 'python,nodejs'
     fail-on-approaching-eol: true

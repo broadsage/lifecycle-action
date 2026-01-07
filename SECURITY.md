@@ -11,7 +11,7 @@ We release patches for security vulnerabilities for the following versions:
 
 ## Reporting a Vulnerability
 
-We take the security of EndOfLife Action seriously. If you believe you have found a security vulnerability, please report it to us as described below.
+We take the security of Software Lifecycle Tracker seriously. If you believe you have found a security vulnerability, please report it to us as described below.
 
 ### Please do NOT:
 
@@ -116,4 +116,4 @@ This action is designed to help maintain security compliance by:
 
 For security concerns, contact: security@broadsage.com
 
-For general questions, open a [GitHub Discussion](https://github.com/broadsage/endoflife-action/discussions)
+For general questions, open a [GitHub Discussion](https://github.com/broadsage/lifecycle-action/discussions)

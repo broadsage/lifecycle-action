@@ -170,5 +170,5 @@ notification-retry-delay-ms: 2000
 ## Need Help?
 
 - 📖 [Main README](../README.md)
-- 🐛 [Report Issues](https://github.com/broadsage/endoflife-action/issues)
-- 💬 [Discussions](https://github.com/broadsage/endoflife-action/discussions)
+- 🐛 [Report Issues](https://github.com/broadsage/lifecycle-action/issues)
+- 💬 [Discussions](https://github.com/broadsage/lifecycle-action/discussions)

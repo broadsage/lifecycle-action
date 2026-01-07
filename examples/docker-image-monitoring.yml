@@ -20,7 +20,7 @@ jobs:
       
       - name: Check base image EOL status
         id: eol-check
-        uses: broadsage/endoflife-action@v4
+        uses: broadsage/lifecycle-action@v4
         with:
           # Track base images and runtimes
           products: 'ubuntu,alpine,debian,python,nodejs,nginx'

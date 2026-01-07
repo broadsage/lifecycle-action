@@ -2,7 +2,7 @@
     "packages": {
         ".": {
             "release-type": "node",
-            "package-name": "endoflife-action",
+            "package-name": "lifecycle-action",
             "include-component-in-tag": false,
             "changelog-path": "CHANGELOG.md",
             "bump-minor-pre-major": true,

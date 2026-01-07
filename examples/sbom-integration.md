@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Check EOL status from SBOM
-        uses: broadsage/endoflife-action@v4
+        uses: broadsage/lifecycle-action@v4
         with:
           sbom-file: 'sbom.json'
           sbom-format: 'cyclonedx'  # or 'auto' for auto-detection
@@ -40,7 +40,7 @@ jobs:
 
 ```yaml
 - name: Check EOL from SPDX
-  uses: broadsage/endoflife-action@v4
+  uses: broadsage/lifecycle-action@v4
   with:
     sbom-file: 'spdx.json'
     sbom-format: 'spdx'
@@ -54,7 +54,7 @@ If your SBOM uses custom component names that don't match endoflife.date product
 
 ```yaml
 - name: Check EOL with custom mapping
-  uses: broadsage/endoflife-action@v4
+  uses: broadsage/lifecycle-action@v4
   with:
     sbom-file: 'sbom.json'
     sbom-component-mapping: |
@@ -88,7 +88,7 @@ jobs:
       
       - name: Extract versions from SBOM
         id: eol
-        uses: broadsage/endoflife-action@v4
+        uses: broadsage/lifecycle-action@v4
         with:
           sbom-file: 'sbom.json'
           output-matrix: true
@@ -120,7 +120,7 @@ jobs:
     output-file: sbom.json
 
 - name: Check EOL
-  uses: broadsage/endoflife-action@v4
+  uses: broadsage/lifecycle-action@v4
   with:
     sbom-file: 'sbom.json'
 ```
@@ -135,7 +135,7 @@ jobs:
       myimage:latest
 
 - name: Check EOL
-  uses: broadsage/endoflife-action@v4
+  uses: broadsage/lifecycle-action@v4
   with:
     sbom-file: 'sbom.json'
 ```
@@ -147,7 +147,7 @@ jobs:
   run: cyclonedx-cli generate -o sbom.json
 
 - name: Check EOL
-  uses: broadsage/endoflife-action@v4
+  uses: broadsage/lifecycle-action@v4
   with:
     sbom-file: 'sbom.json'
 ```
@@ -158,7 +158,7 @@ Get statistics about your SBOM:
 
 ```yaml
 - name: Analyze SBOM
-  uses: broadsage/endoflife-action@v4
+  uses: broadsage/lifecycle-action@v4
   with:
     sbom-file: 'sbom.json'
     output-format: 'json'
@@ -202,7 +202,7 @@ When using SBOM integration, all standard outputs are available:
 ```yaml
 - name: Check EOL from SBOM
   id: eol-check
-  uses: broadsage/endoflife-action@v4
+  uses: broadsage/lifecycle-action@v4
   with:
     sbom-file: 'sbom.json'
 

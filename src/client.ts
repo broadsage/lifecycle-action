@@ -29,7 +29,7 @@ export class EndOfLifeClient {
   private cacheTtl: number;
 
   constructor(baseUrl = 'https://endoflife.date/api/v1', cacheTtl = 3600) {
-    this.httpClient = new HttpClient('endoflife-action/v3', undefined, {
+    this.httpClient = new HttpClient('lifecycle-action/v4', undefined, {
       allowRetries: true,
       maxRetries: 3,
     });

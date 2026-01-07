@@ -1,5 +1,5 @@
 {
-  "name": "endoflife-action",
+  "name": "lifecycle-action",
   "version": "4.1.1",
   "description": "Automate software lifecycle tracking with intelligent EOL detection, multi-channel notifications, and seamless CI/CD integration",
   "main": "dist/index.js",
@@ -20,7 +20,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/broadsage/endoflife-action.git"
+    "url": "git+https://github.com/broadsage/lifecycle-action.git"
   },
   "keywords": [
     "github-action",

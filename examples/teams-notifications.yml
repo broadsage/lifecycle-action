@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check .NET EOL Status
-        uses: broadsage/endoflife-action@v4
+        uses: broadsage/lifecycle-action@v4
         with:
           # .NET related products
           products: 'dotnet,windows,sql-server,azure-devops-server'

@@ -55480,7 +55480,7 @@ class EndOfLifeClient {
     cache;
     cacheTtl;
     constructor(baseUrl = 'https://endoflife.date/api/v1', cacheTtl = 3600) {
-        this.httpClient = new http_client_1.HttpClient('endoflife-action/v3', undefined, {
+        this.httpClient = new http_client_1.HttpClient('lifecycle-action/v4', undefined, {
             allowRetries: true,
             maxRetries: 3,
         });
@@ -55946,7 +55946,7 @@ const notifications_1 = __nccwpck_require__(53688);
  */
 async function run() {
     try {
-        core.info('🚀 Starting EndOfLife Action...');
+        core.info('🚀 Starting Software Lifecycle Tracker...');
         // Get and validate inputs
         const inputs = (0, inputs_1.getInputs)();
         (0, inputs_1.validateInputs)(inputs);
@@ -57718,7 +57718,7 @@ function formatAsJson(results) {
  */
 function formatAsMarkdown(results) {
     const lines = [];
-    lines.push('# 📊 EndOfLife Analysis Report');
+    lines.push('# 📊 Software Lifecycle Analysis Report');
     lines.push('');
     lines.push(`**Total Products Checked:** ${results.totalProductsChecked}`);
     lines.push(`**Total Releases Checked:** ${results.totalReleasesChecked}`);
@@ -57875,7 +57875,7 @@ function createIssueBody(results) {
     const lines = [];
     lines.push('# 🚨 End-of-Life Software Detected');
     lines.push('');
-    lines.push('This issue was automatically created by the EndOfLife Action because end-of-life software versions were detected.');
+    lines.push('This issue was automatically created by the Software Lifecycle Tracker because end-of-life software versions were detected.');
     lines.push('');
     if (results.eolProducts.length > 0) {
         lines.push('## ❌ End-of-Life Versions');
@@ -57942,7 +57942,7 @@ function createIssueBody(results) {
     lines.push('');
     lines.push('---');
     lines.push('');
-    lines.push('*This issue was created automatically by [EndOfLife Action](https://github.com/broadsage/endoflife-action)*');
+    lines.push('*This issue was created automatically by [Software Lifecycle Tracker](https://github.com/broadsage/lifecycle-action)*');
     return lines.join('\n');
 }
 

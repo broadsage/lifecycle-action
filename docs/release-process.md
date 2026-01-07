@@ -1,6 +1,6 @@
 # Release Process
 
-This document describes the automated release process for the endoflife-action using **release-please**.
+This document describes the automated release process for the lifecycle-action using **release-please**.
 
 ## Overview
 

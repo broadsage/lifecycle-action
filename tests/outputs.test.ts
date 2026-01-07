@@ -82,7 +82,7 @@ describe('Output Formatting', () => {
         it('should format results as markdown', () => {
             const result = formatAsMarkdown(mockResults);
 
-            expect(result).toContain('# 📊 EndOfLife Analysis Report');
+            expect(result).toContain('# 📊 Software Lifecycle Analysis Report');
             expect(result).toContain('**Total Products Checked:** 1');
             expect(result).toContain('## ❌ End-of-Life Detected');
         });
@@ -555,7 +555,7 @@ describe('Output Formatting', () => {
         it('should write markdown to step summary', async () => {
             await writeToStepSummary(mockResults);
 
-            expect(core.summary.addRaw).toHaveBeenCalledWith(expect.stringContaining('# 📊 EndOfLife Analysis Report'));
+            expect(core.summary.addRaw).toHaveBeenCalledWith(expect.stringContaining('# 📊 Software Lifecycle Analysis Report'));
             expect(core.summary.write).toHaveBeenCalled();
         });
 

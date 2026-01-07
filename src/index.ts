@@ -35,7 +35,7 @@ import {
  */
 async function run(): Promise<void> {
   try {
-    core.info('🚀 Starting EndOfLife Action...');
+    core.info('🚀 Starting Software Lifecycle Tracker...');
 
     // Get and validate inputs
     const inputs = getInputs();

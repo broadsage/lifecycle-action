@@ -1,9 +1,9 @@
 # 🛡️ Software Lifecycle Tracker
 
-[![CI](https://github.com/broadsage/endoflife-action/workflows/CI/badge.svg)](https://github.com/broadsage/endoflife-action/actions)
+[![CI](https://github.com/broadsage/lifecycle-action/workflows/CI/badge.svg)](https://github.com/broadsage/lifecycle-action/actions)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![GitHub release](https://img.shields.io/github/release/broadsage/endoflife-action.svg)](https://github.com/broadsage/endoflife-action/releases)
-[![Marketplace](https://img.shields.io/badge/GitHub-Marketplace-blue)](https://github.com/marketplace/actions/broadsage-eol-github-action)
+[![GitHub release](https://img.shields.io/github/release/broadsage/lifecycle-action.svg)](https://github.com/broadsage/lifecycle-action/releases)
+[![Marketplace](https://img.shields.io/badge/GitHub-Marketplace-blue)](https://github.com/marketplace/actions/software-lifecycle-tracker)
 
 > **Automate software lifecycle tracking with intelligent EOL detection, multi-channel notifications, and seamless CI/CD integration.**
 
@@ -30,7 +30,7 @@ Never miss an End-of-Life date again. Automatically track **380+ software produc
 Stop your build if a dependency is no longer supported.
 
 ```yaml
-- uses: broadsage/endoflife-action@v4
+- uses: broadsage/lifecycle-action@v4
   with:
     products: 'python,nodejs,postgresql'
     fail-on-eol: true
@@ -40,7 +40,7 @@ Stop your build if a dependency is no longer supported.
 Keep your team informed across multiple platforms.
 
 ```yaml
-- uses: broadsage/endoflife-action@v4
+- uses: broadsage/lifecycle-action@v4
   with:
     products: 'python,nodejs'
     slack-webhook-url: ${{ secrets.SLACK_WEBHOOK }}
@@ -58,7 +58,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: broadsage/endoflife-action@v4
+      - uses: broadsage/lifecycle-action@v4
         id: set-matrix
         with:
           products: 'python'
@@ -136,8 +136,8 @@ jobs:
 
 We love community contributions! Check out our [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
 
-*   **Bugs/Features**: [Open an issue](https://github.com/broadsage/endoflife-action/issues)
-*   **Discussions**: [Join the conversation](https://github.com/broadsage/endoflife-action/discussions)
+*   **Bugs/Features**: [Open an issue](https://github.com/broadsage/lifecycle-action/issues)
+*   **Discussions**: [Join the conversation](https://github.com/broadsage/lifecycle-action/discussions)
 *   **Data Source**: Powered by the amazing [endoflife.date](https://endoflife.date) API.
 
 ---

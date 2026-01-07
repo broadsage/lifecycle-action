@@ -1,5 +1,5 @@
 # Matrix Generation Example
-# Demonstrates how to use EndOfLife Action to generate build matrices
+# Demonstrates how to use Software Lifecycle Tracker to generate build matrices
 
 name: Matrix Generation Example
 
@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Check Python EOL Status
         id: eol
-        uses: broadsage/endoflife-action@v4
+        uses: broadsage/lifecycle-action@v4
         with:
           products: 'python'
           output-matrix: true
@@ -84,7 +84,7 @@ jobs:
     steps:
       - name: Check Node.js EOL Status
         id: eol
-        uses: broadsage/endoflife-action@v4
+        uses: broadsage/lifecycle-action@v4
         with:
           products: 'nodejs'
           output-matrix: true
