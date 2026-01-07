@@ -9,11 +9,9 @@
 
 Never miss an End-of-Life date again. Automatically track **380+ software products**, send alerts to **Slack/Discord/Teams**, generate **test matrices**, and keep your dependencies secure and up-to-date.
 
----
-
 ## ✨ Key Features
 
-| | |
+| Feature | Description |
 | :--- | :--- |
 | 🔍 **Track 380+ Products** | Native support for Python, Node.js, Ubuntu, PostgreSQL, Kubernetes, and many more via [endoflife.date](https://endoflife.date). |
 | 📢 **Smart Notifications** | Instant alerts via **Slack, Discord, Teams, Google Chat**, or custom webhooks. |
@@ -21,8 +19,6 @@ Never miss an End-of-Life date again. Automatically track **380+ software produc
 | 📊 **Dynamic Matrices** | Automatically build version matrices for multi-version CI/CD testing strategies. |
 | 🎯 **Universal Extraction** | Extract versions directly from `package.json`, `Dockerfile`, `Helm charts`, or custom regex. |
 | ⚡ **Enterprise Ready** | Feature-rich with **built-in caching**, SSRF protection, and 85%+ test coverage. |
-
----
 
 ## 🚀 Quick Start
 
@@ -77,8 +73,6 @@ jobs:
       - run: pytest
 ```
 
----
-
 ## 📖 Complete Documentation
 
 <details>
@@ -125,8 +119,6 @@ For a complete list of all available inputs and outputs, please refer to our **[
 
 </details>
 
----
-
 ## 🏆 Why Choose This Action?
 
 | Feature | Software Lifecycle Tracker | Industry Average |
@@ -137,8 +129,6 @@ For a complete list of all available inputs and outputs, please refer to our **[
 | **Matrix Automation** | Native Support | ❌ |
 | **Active Maintenance** | ✅ Verified | Varies |
 
----
-
 ## 🤝 Contributing & Support
 
 We love community contributions! Check out our [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
@@ -146,8 +136,6 @@ We love community contributions! Check out our [CONTRIBUTING.md](CONTRIBUTING.md
 *   **Bugs/Features**: [Open an issue](https://github.com/broadsage/lifecycle-action/issues)
 *   **Discussions**: [Join the conversation](https://github.com/broadsage/lifecycle-action/discussions)
 *   **Data Source**: Powered by the amazing [endoflife.date](https://endoflife.date) API.
-
----
 
 <p align="center">
   <b>Made with ❤️ by <a href="https://github.com/broadsage">Broadsage Open Source</a></b><br>
