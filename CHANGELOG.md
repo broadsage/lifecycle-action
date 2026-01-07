@@ -1,5 +1,25 @@
 # Changelog
 
+## [4.2.0](https://github.com/broadsage/lifecycle-action/compare/v4.1.1...v4.2.0) (2026-01-07)
+
+
+### Features
+
+* add marketplace branding to action.yml ([33932d9](https://github.com/broadsage/lifecycle-action/commit/33932d939b59aedf025f9b6ae6dd8b4460ec15e2))
+
+
+### Documentation
+
+* add comprehensive inputs and outputs documentation ([65b0610](https://github.com/broadsage/lifecycle-action/commit/65b06107dba338a196e3a6466a6b5728b07443fd))
+* refactor action name, description, and README for modern look ([f1fb18d](https://github.com/broadsage/lifecycle-action/commit/f1fb18d7c86adf83397aeee41b17e84c2084d016))
+
+
+### Miscellaneous
+
+* **deps:** update all non-major dependencies ([8d2f0b1](https://github.com/broadsage/lifecycle-action/commit/8d2f0b1d9a749c8d7223dc685d20fa173b1b06f9))
+* **deps:** update all non-major dependencies ([8d2f0b1](https://github.com/broadsage/lifecycle-action/commit/8d2f0b1d9a749c8d7223dc685d20fa173b1b06f9))
+* rename repository to lifecycle-action and update branding to Software Lifecycle Tracker ([0b2ae71](https://github.com/broadsage/lifecycle-action/commit/0b2ae711e695722a149dc8d85fc004ecf3e44001))
+
 ## [4.1.1](https://github.com/broadsage/lifecycle-action/compare/v4.1.0...v4.1.1) (2026-01-06)
 
 
