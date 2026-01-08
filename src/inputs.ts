@@ -10,16 +10,7 @@ import { getErrorMessage } from './utils/error-utils';
  */
 export function getInputs(): ActionInputs {
   const products = core.getInput('products', { required: true });
-  let releasesInput = core.getInput('releases');
-  const cyclesInput = core.getInput('cycles');
-
-  // Use cycles as an alias if releases is at its default value or empty
-  const releases =
-    (releasesInput === '{}' || !releasesInput) &&
-    cyclesInput &&
-    cyclesInput !== '{}'
-      ? cyclesInput
-      : releasesInput || '{}';
+  const releases = core.getInput('releases') || '{}';
   const checkEol = core.getBooleanInput('check-eol');
   const eolThresholdDays = parseInt(
     core.getInput('eol-threshold-days') || '90',

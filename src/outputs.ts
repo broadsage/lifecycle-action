@@ -3,8 +3,64 @@
 
 import * as core from '@actions/core';
 import * as fs from 'fs/promises';
-import { ActionResults, EolStatus } from './types';
+import { ActionResults, EolStatus, ProductVersionInfo } from './types';
 import { getErrorMessage } from './utils/error-utils';
+
+/**
+ * Helper class for generating Markdown components
+ */
+class MarkdownHelper {
+  /**
+   * Format a product version row for a table
+   */
+  static formatProductRow(
+    p: ProductVersionInfo,
+    type: 'standard' | 'dashboard' | 'stale' | 'discontinued'
+  ): string {
+    switch (type) {
+      case 'dashboard':
+        return `| **${p.product}** | \`${p.release}\` | ${p.eolDate || 'N/A'} | Update to \`${p.latestVersion || 'latest'}\` |`;
+      case 'stale':
+        return `| **${p.product}** | \`${p.release}\` | ${p.latestReleaseDate || 'N/A'} | \`${p.daysSinceLatestRelease}\` days stale |`;
+      case 'discontinued':
+        return `| **${p.product}** | \`${p.release}\` | ${p.discontinuedDate || 'N/A'} |`;
+      default:
+        return `| ${p.product} | ${p.release} | ${p.eolDate || 'N/A'} | ${p.latestVersion || 'N/A'} | ${p.isLts ? '✓' : '✗'} |`;
+    }
+  }
+
+  /**
+   * Create a Markdown table
+   */
+  static createTable(headers: string[], rows: string[]): string {
+    if (rows.length === 0) return '';
+    const alignment = headers.map(() => '---').join(' | ');
+    return [`| ${headers.join(' | ')} |`, `| ${alignment} |`, ...rows, ''].join(
+      '\n'
+    );
+  }
+
+  /**
+   * Create a section header with optional description
+   */
+  static createSection(
+    title: string,
+    description?: string,
+    level: number = 2
+  ): string {
+    const prefix = '#'.repeat(level);
+    return description
+      ? `${prefix} ${title}\n\n${description}\n`
+      : `${prefix} ${title}\n`;
+  }
+
+  /**
+   * Create a collapsed details section
+   */
+  static createDetails(summary: string, content: string): string {
+    return `<details><summary>${summary}</summary>\n\n${content}\n</details>\n`;
+  }
+}
 
 /**
  * Format results as JSON
@@ -19,82 +75,79 @@ export function formatAsJson(results: ActionResults): string {
 export function formatAsMarkdown(results: ActionResults): string {
   const lines: string[] = [];
 
-  lines.push('# 📊 Software Lifecycle Analysis Report');
-  lines.push('');
+  lines.push('# 📊 Software Lifecycle Analysis Report\n');
   lines.push(`**Total Products Checked:** ${results.totalProductsChecked}`);
-  lines.push(`**Total Releases Checked:** ${results.totalReleasesChecked}`);
-  lines.push('');
+  lines.push(`**Total Releases Checked:** ${results.totalReleasesChecked}\n`);
 
   if (results.eolProducts.length > 0) {
-    lines.push('## ❌ End-of-Life Detected');
-    lines.push('');
-    lines.push('| Product | Release | EOL Date | Latest Version | LTS |');
-    lines.push('|---------|---------|----------|----------------|-----|');
-    for (const product of results.eolProducts) {
-      lines.push(
-        `| ${product.product} | ${product.release} | ${product.eolDate || 'N/A'} | ${product.latestVersion || 'N/A'} | ${product.isLts ? '✓' : '✗'} |`
-      );
-    }
-    lines.push('');
+    lines.push(MarkdownHelper.createSection('❌ End-of-Life Detected'));
+    lines.push(
+      MarkdownHelper.createTable(
+        ['Product', 'Release', 'EOL Date', 'Latest Version', 'LTS'],
+        results.eolProducts.map((p) =>
+          MarkdownHelper.formatProductRow(p, 'standard')
+        )
+      )
+    );
   }
 
   if (results.approachingEolProducts.length > 0) {
-    lines.push('## ⚠️ Approaching End-of-Life');
-    lines.push('');
+    lines.push(MarkdownHelper.createSection('⚠️ Approaching End-of-Life'));
     lines.push(
-      '| Product | Release | Days Until EOL | EOL Date | Latest Version | LTS |'
+      MarkdownHelper.createTable(
+        [
+          'Product',
+          'Release',
+          'Days Until EOL',
+          'EOL Date',
+          'Latest Version',
+          'LTS',
+        ],
+        results.approachingEolProducts.map(
+          (p) =>
+            `| ${p.product} | ${p.release} | ${p.daysUntilEol || 'N/A'} | ${p.eolDate || 'N/A'} | ${p.latestVersion || 'N/A'} | ${p.isLts ? '✓' : '✗'} |`
+        )
+      )
     );
-    lines.push(
-      '|---------|---------|----------------|----------|----------------|-----|'
-    );
-    for (const product of results.approachingEolProducts) {
-      lines.push(
-        `| ${product.product} | ${product.release} | ${product.daysUntilEol || 'N/A'} | ${product.eolDate || 'N/A'} | ${product.latestVersion || 'N/A'} | ${product.isLts ? '✓' : '✗'} |`
-      );
-    }
-    lines.push('');
   }
 
   if (results.staleProducts.length > 0) {
-    lines.push('## ⏰ Stale Versions');
-    lines.push('');
-    lines.push('| Product | Release | Last Release Date | Days Since Latest |');
-    lines.push('|---------|---------|-------------------|-------------------|');
-    for (const product of results.staleProducts) {
-      lines.push(
-        `| ${product.product} | ${product.release} | ${product.latestReleaseDate || 'N/A'} | ${product.daysSinceLatestRelease || 'N/A'} |`
-      );
-    }
-    lines.push('');
+    lines.push(MarkdownHelper.createSection('⏰ Stale Versions'));
+    lines.push(
+      MarkdownHelper.createTable(
+        ['Product', 'Release', 'Last Release Date', 'Days Since Latest'],
+        results.staleProducts.map((p) =>
+          MarkdownHelper.formatProductRow(p, 'stale')
+        )
+      )
+    );
   }
 
   if (results.discontinuedProducts.length > 0) {
-    lines.push('## 🚫 Discontinued Products');
-    lines.push('');
-    lines.push('| Product | Release | Discontinued Date |');
-    lines.push('|---------|---------|-------------------|');
-    for (const product of results.discontinuedProducts) {
-      lines.push(
-        `| ${product.product} | ${product.release} | ${product.discontinuedDate || 'N/A'} |`
-      );
-    }
-    lines.push('');
+    lines.push(MarkdownHelper.createSection('🚫 Discontinued Products'));
+    lines.push(
+      MarkdownHelper.createTable(
+        ['Product', 'Release', 'Discontinued Date'],
+        results.discontinuedProducts.map((p) =>
+          MarkdownHelper.formatProductRow(p, 'discontinued')
+        )
+      )
+    );
   }
 
   const activeProducts = results.products.filter(
     (p) => p.status === EolStatus.ACTIVE
   );
   if (activeProducts.length > 0) {
-    lines.push('## ✅ Active Support');
-    lines.push('');
-    lines.push('| Product | Release | EOL Date | Latest Version | LTS |');
-    lines.push('|---------|---------|----------|----------------|-----|');
-    for (const product of activeProducts) {
-      lines.push(
-        `| ${product.product} | ${product.release} | ${product.eolDate || 'N/A'} | ${product.latestVersion || 'N/A'} | ${product.isLts ? '✓' : '✗'} |`
-      );
-    }
-    lines.push('');
+    lines.push(MarkdownHelper.createSection('✅ Active Support'));
+    lines.push(
+      MarkdownHelper.createTable(
+        ['Product', 'Release', 'EOL Date', 'Latest Version', 'LTS'],
+        activeProducts.map((p) =>
+          MarkdownHelper.formatProductRow(p, 'standard')
+        )
+      )
+    );
   }
 
   if (
@@ -102,9 +155,7 @@ export function formatAsMarkdown(results: ActionResults): string {
     results.approachingEolProducts.length === 0
   ) {
     lines.push('## ✅ All Clear!');
-    lines.push('');
-    lines.push('All tracked versions are actively supported.');
-    lines.push('');
+    lines.push('All tracked versions are actively supported.\n');
   }
 
   return lines.join('\n');
@@ -147,19 +198,11 @@ export function generateMatrix(
   excludeApproachingEol = false
 ): { versions: string[] } {
   let products = results.products;
-
-  // Filter based on EOL status
-  if (excludeEol) {
+  if (excludeEol)
     products = products.filter((p) => p.status !== EolStatus.END_OF_LIFE);
-  }
-  if (excludeApproachingEol) {
+  if (excludeApproachingEol)
     products = products.filter((p) => p.status !== EolStatus.APPROACHING_EOL);
-  }
-
-  // Extract unique releases/versions
-  const versions = products.map((p) => p.release);
-
-  return { versions };
+  return { versions: products.map((p) => p.release) };
 }
 
 /**
@@ -180,62 +223,51 @@ export function generateMatrixInclude(
   }>;
 } {
   let products = results.products;
-
-  // Filter based on EOL status
-  if (excludeEol) {
+  if (excludeEol)
     products = products.filter((p) => p.status !== EolStatus.END_OF_LIFE);
-  }
-  if (excludeApproachingEol) {
+  if (excludeApproachingEol)
     products = products.filter((p) => p.status !== EolStatus.APPROACHING_EOL);
-  }
-
-  // Map to detailed matrix items
-  const include = products.map((p) => ({
-    version: p.release,
-    release: p.release,
-    isLts: p.isLts,
-    eolDate: p.eolDate,
-    status: p.status,
-    releaseDate: p.releaseDate,
-  }));
-
-  return { include };
+  return {
+    include: products.map((p) => ({
+      version: p.release,
+      release: p.release,
+      isLts: p.isLts,
+      eolDate: p.eolDate,
+      status: p.status,
+      releaseDate: p.releaseDate,
+    })),
+  };
 }
 
 /**
  * Set action outputs
  */
 export function setOutputs(results: ActionResults): void {
-  core.setOutput('eol-detected', results.eolDetected);
-  core.setOutput('approaching-eol', results.approachingEol);
-  core.setOutput('results', JSON.stringify(results));
-  core.setOutput('eol-products', JSON.stringify(results.eolProducts));
-  core.setOutput(
-    'approaching-eol-products',
-    JSON.stringify(results.approachingEolProducts)
-  );
-  core.setOutput('latest-versions', JSON.stringify(results.latestVersions));
-  core.setOutput('summary', results.summary);
-  core.setOutput('total-products-checked', results.totalProductsChecked);
-  core.setOutput('total-releases-checked', results.totalReleasesChecked);
-  core.setOutput('stale-detected', results.staleDetected);
-  core.setOutput('stale-products', JSON.stringify(results.staleProducts));
-  core.setOutput('discontinued-detected', results.discontinuedDetected);
-  core.setOutput(
-    'discontinued-products',
-    JSON.stringify(results.discontinuedProducts)
-  );
-  core.setOutput(
-    'extended-support-products',
-    JSON.stringify(results.extendedSupportProducts)
-  );
+  const outputs = {
+    'eol-detected': results.eolDetected,
+    'approaching-eol': results.approachingEol,
+    results: JSON.stringify(results),
+    'eol-products': JSON.stringify(results.eolProducts),
+    'approaching-eol-products': JSON.stringify(results.approachingEolProducts),
+    'latest-versions': JSON.stringify(results.latestVersions),
+    summary: results.summary,
+    'total-products-checked': results.totalProductsChecked,
+    'total-releases-checked': results.totalReleasesChecked,
+    'stale-detected': results.staleDetected,
+    'stale-products': JSON.stringify(results.staleProducts),
+    'discontinued-detected': results.discontinuedDetected,
+    'discontinued-products': JSON.stringify(results.discontinuedProducts),
+    'extended-support-products': JSON.stringify(
+      results.extendedSupportProducts
+    ),
+    matrix: results.matrix ? JSON.stringify(results.matrix) : undefined,
+    'matrix-include': results.matrixInclude
+      ? JSON.stringify(results.matrixInclude)
+      : undefined,
+  };
 
-  // Matrix outputs (if generated)
-  if (results.matrix) {
-    core.setOutput('matrix', JSON.stringify(results.matrix));
-  }
-  if (results.matrixInclude) {
-    core.setOutput('matrix-include', JSON.stringify(results.matrixInclude));
+  for (const [key, value] of Object.entries(outputs)) {
+    if (value !== undefined) core.setOutput(key, value);
   }
 }
 
@@ -243,90 +275,92 @@ export function setOutputs(results: ActionResults): void {
  * Create issue body for EOL detection
  */
 export function createIssueBody(results: ActionResults): string {
-  const lines: string[] = [];
-
-  lines.push('# 🚨 End-of-Life Software Detected');
-  lines.push('');
-  lines.push(
-    'This issue was automatically created by the Software Lifecycle Tracker because end-of-life software versions were detected.'
-  );
-  lines.push('');
+  const lines: string[] = [
+    '# 🚨 End-of-Life Software Detected\n',
+    'This issue was automatically created by the Software Lifecycle Tracker because end-of-life software versions were detected.\n',
+  ];
 
   if (results.eolProducts.length > 0) {
-    lines.push('## ❌ End-of-Life Versions');
+    lines.push(MarkdownHelper.createSection('❌ End-of-Life Versions'));
+    lines.push(
+      results.eolProducts
+        .map((p) => {
+          const parts = [
+            `### ${p.product} ${p.release}`,
+            `- **EOL Date:** ${p.eolDate || 'N/A'}`,
+            `- **Latest Version:** ${p.latestVersion || 'N/A'}`,
+            `- **LTS:** ${p.isLts ? 'Yes' : 'No'}`,
+          ];
+          if (p.link) parts.push(`- **More Info:** ${p.link}`);
+          return parts.join('\n');
+        })
+        .join('\n\n')
+    );
     lines.push('');
-    for (const product of results.eolProducts) {
-      lines.push(`### ${product.product} ${product.release}`);
-      lines.push('');
-      lines.push(`- **EOL Date:** ${product.eolDate}`);
-      lines.push(`- **Latest Version:** ${product.latestVersion || 'N/A'}`);
-      lines.push(`- **LTS:** ${product.isLts ? 'Yes' : 'No'}`);
-      if (product.link) {
-        lines.push(`- **More Info:** ${product.link}`);
-      }
-      lines.push('');
-    }
   }
 
   if (results.approachingEolProducts.length > 0) {
-    lines.push('## ⚠️ Approaching End-of-Life');
+    lines.push(MarkdownHelper.createSection('⚠️ Approaching End-of-Life'));
+    lines.push(
+      results.approachingEolProducts
+        .map((p) => {
+          const parts = [
+            `### ${p.product} ${p.release}`,
+            `- **Days Until EOL:** ${p.daysUntilEol}`,
+            `- **EOL Date:** ${p.eolDate || 'N/A'}`,
+            `- **Latest Version:** ${p.latestVersion || 'N/A'}`,
+            `- **LTS:** ${p.isLts ? 'Yes' : 'No'}`,
+          ];
+          if (p.link) parts.push(`- **More Info:** ${p.link}`);
+          return parts.join('\n');
+        })
+        .join('\n\n')
+    );
     lines.push('');
-    for (const product of results.approachingEolProducts) {
-      lines.push(`### ${product.product} ${product.release}`);
-      lines.push('');
-      lines.push(`- **Days Until EOL:** ${product.daysUntilEol}`);
-      lines.push(`- **EOL Date:** ${product.eolDate}`);
-      lines.push(`- **Latest Version:** ${product.latestVersion || 'N/A'}`);
-      lines.push(`- **LTS:** ${product.isLts ? 'Yes' : 'No'}`);
-      if (product.link) {
-        lines.push(`- **More Info:** ${product.link}`);
-      }
-      lines.push('');
-    }
   }
 
   if (results.staleProducts.length > 0) {
-    lines.push('## ⏰ Stale Versions');
+    lines.push(MarkdownHelper.createSection('⏰ Stale Versions'));
+    lines.push(
+      results.staleProducts
+        .map((p) => {
+          return [
+            `### ${p.product} ${p.release}`,
+            `- **Days Since Latest Release:** ${p.daysSinceLatestRelease}`,
+            `- **Last Release Date:** ${p.latestReleaseDate || 'N/A'}`,
+            `- **Latest Version:** ${p.latestVersion || 'N/A'}`,
+          ].join('\n');
+        })
+        .join('\n\n')
+    );
     lines.push('');
-    for (const product of results.staleProducts) {
-      lines.push(`### ${product.product} ${product.release}`);
-      lines.push('');
-      lines.push(
-        `- **Days Since Latest Release:** ${product.daysSinceLatestRelease}`
-      );
-      lines.push(
-        `- **Last Release Date:** ${product.latestReleaseDate || 'N/A'}`
-      );
-      lines.push(`- **Latest Version:** ${product.latestVersion || 'N/A'}`);
-      lines.push('');
-    }
   }
 
   if (results.discontinuedProducts.length > 0) {
-    lines.push('## 🚫 Discontinued Products');
+    lines.push(MarkdownHelper.createSection('🚫 Discontinued Products'));
+    lines.push(
+      results.discontinuedProducts
+        .map((p) => {
+          const parts = [
+            `### ${p.product} ${p.release}`,
+            `- **Latest Version:** ${p.latestVersion || 'N/A'}`,
+          ];
+          if (p.discontinuedDate)
+            parts.push(`- **Discontinued Date:** ${p.discontinuedDate}`);
+          return parts.join('\n');
+        })
+        .join('\n\n')
+    );
     lines.push('');
-    for (const product of results.discontinuedProducts) {
-      lines.push(`### ${product.product} ${product.release}`);
-      lines.push('');
-      if (product.discontinuedDate) {
-        lines.push(`- **Discontinued Date:** ${product.discontinuedDate}`);
-      }
-      lines.push(`- **Latest Version:** ${product.latestVersion || 'N/A'}`);
-      lines.push('');
-    }
   }
 
-  lines.push('## 📋 Recommended Actions');
-  lines.push('');
+  lines.push('## 📋 Recommended Actions\n');
   lines.push('1. Review the affected software versions');
   lines.push('2. Plan migration to supported versions');
   lines.push('3. Update dependencies and configurations');
-  lines.push('4. Test thoroughly before deploying');
-  lines.push('');
-  lines.push('---');
-  lines.push('');
+  lines.push('4. Test thoroughly before deploying\n');
   lines.push(
-    '*This issue was created automatically by [Software Lifecycle Tracker](https://github.com/broadsage/lifecycle-action)*'
+    '---\n*This issue was created automatically by [Software Lifecycle Tracker](https://github.com/broadsage/lifecycle-action)*'
   );
 
   return lines.join('\n');
@@ -336,16 +370,11 @@ export function createIssueBody(results: ActionResults): string {
  * Create a modern lifecycle dashboard body
  */
 export function formatAsDashboard(results: ActionResults): string {
-  const lines: string[] = [];
+  const lines: string[] = [
+    '# 🛡️ Software Lifecycle Dashboard\n',
+    'This dashboard provides a live overview of the support status for your software dependencies. It is automatically updated.\n',
+  ];
 
-  lines.push('# 🛡️ Software Lifecycle Dashboard');
-  lines.push('');
-  lines.push(
-    'This dashboard provides a live overview of the support status for all tracked software dependencies. It is automatically updated by the [Software Lifecycle Tracker](https://github.com/broadsage/lifecycle-action).'
-  );
-  lines.push('');
-
-  // Status Summary Cards
   const eolCount = results.eolProducts.length;
   const approachingCount = results.approachingEolProducts.length;
   const healthyCount = results.products.filter(
@@ -354,52 +383,83 @@ export function formatAsDashboard(results: ActionResults): string {
 
   lines.push('### 📊 Status Overview');
   lines.push(
-    `> 🔴 **${eolCount}** End-of-Life | 🟠 **${approachingCount}** Warning | 🟢 **${healthyCount}** Healthy`
+    `> 🔴 **${eolCount}** End-of-Life | 🟠 **${approachingCount}** Warning | 🟢 **${healthyCount}** Healthy\n`
   );
-  lines.push('');
 
-  if (results.eolProducts.length > 0) {
-    lines.push('## 🔴 Critical Attention Required');
-    lines.push('The following versions have reached End-of-Life:');
-    lines.push('');
-    lines.push('| Product | Version | EOL Date | Recommended |');
-    lines.push('| :--- | :--- | :--- | :--- |');
-    for (const p of results.eolProducts) {
-      lines.push(
-        `| **${p.product}** | \`${p.release}\` | ${p.eolDate} | Update to \`${p.latestVersion || 'latest'}\` |`
-      );
-    }
-    lines.push('');
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+  const recentEol = results.eolProducts.filter(
+    (p) => p.eolDate && new Date(p.eolDate) >= ninetyDaysAgo
+  );
+  const legacyEol = results.eolProducts.filter(
+    (p) => !p.eolDate || new Date(p.eolDate) < ninetyDaysAgo
+  );
+
+  if (recentEol.length > 0) {
+    lines.push(
+      MarkdownHelper.createSection(
+        '🔴 Critical: Recent End-of-Life',
+        'Immediate action recommended (EOL within last 90 days).'
+      )
+    );
+    lines.push(
+      MarkdownHelper.createTable(
+        ['Product', 'Version', 'EOL Date', 'Recommended'],
+        recentEol.map((p) => MarkdownHelper.formatProductRow(p, 'dashboard'))
+      )
+    );
   }
 
   if (results.approachingEolProducts.length > 0) {
-    lines.push('## 🟠 Upcoming Risks');
-    lines.push('These versions are approaching EOL soon. Plan your migration.');
-    lines.push('');
-    lines.push('| Product | Version | EOL Date | Days Left |');
-    lines.push('| :--- | :--- | :--- | :--- |');
-    for (const p of results.approachingEolProducts) {
-      lines.push(
-        `| **${p.product}** | \`${p.release}\` | ${p.eolDate} | \`${p.daysUntilEol}\` days |`
-      );
-    }
-    lines.push('');
+    lines.push(
+      MarkdownHelper.createSection(
+        '🟠 Upcoming Risks',
+        'Plan migration before these versions reach End-of-Life.'
+      )
+    );
+    lines.push(
+      MarkdownHelper.createTable(
+        ['Product', 'Version', 'EOL Date', 'Days Left'],
+        results.approachingEolProducts.map(
+          (p) =>
+            `| **${p.product}** | \`${p.release}\` | ${p.eolDate} | \`${p.daysUntilEol}\` days |`
+        )
+      )
+    );
+  }
+
+  if (legacyEol.length > 0) {
+    lines.push('## 💾 Legacy End-of-Life');
+    lines.push(
+      MarkdownHelper.createDetails(
+        'Click to view products EOL for > 90 days',
+        MarkdownHelper.createTable(
+          ['Product', 'Version', 'EOL Date', 'Latest'],
+          legacyEol.map(
+            (p) =>
+              `| ${p.product} | \`${p.release}\` | ${p.eolDate || 'N/A'} | \`${p.latestVersion || 'N/A'}\` |`
+          )
+        )
+      )
+    );
   }
 
   if (results.staleProducts.length > 0) {
-    lines.push('## ⏰ Maintenance Required');
     lines.push(
-      'No updates have been released for these versions in over a year.'
+      MarkdownHelper.createSection(
+        '⏰ Maintenance Required',
+        'No updates released for over a year.'
+      )
     );
-    lines.push('');
-    lines.push('| Product | Version | Last Update | Status |');
-    lines.push('| :--- | :--- | :--- | :--- |');
-    for (const p of results.staleProducts) {
-      lines.push(
-        `| **${p.product}** | \`${p.release}\` | ${p.latestReleaseDate || 'N/A'} | \`${p.daysSinceLatestRelease}\` days stale |`
-      );
-    }
-    lines.push('');
+    lines.push(
+      MarkdownHelper.createTable(
+        ['Product', 'Version', 'Last Update', 'Status'],
+        results.staleProducts.map((p) =>
+          MarkdownHelper.formatProductRow(p, 'stale')
+        )
+      )
+    );
   }
 
   const activeProducts = results.products.filter(
@@ -407,24 +467,23 @@ export function formatAsDashboard(results: ActionResults): string {
   );
   if (activeProducts.length > 0) {
     lines.push('## 🟢 Healthy & Supported');
-    lines.push('<details>');
-    lines.push('<summary>Click to view all healthy dependencies</summary>');
-    lines.push('');
-    lines.push('| Product | Version | EOL Date | Latest |');
-    lines.push('| :--- | :--- | :--- | :--- |');
-    for (const p of activeProducts) {
-      lines.push(
-        `| ${p.product} | \`${p.release}\` | ${p.eolDate || 'N/A'} | \`${p.latestVersion || 'N/A'}\` |`
-      );
-    }
-    lines.push('');
-    lines.push('</details>');
-    lines.push('');
+    lines.push(
+      MarkdownHelper.createDetails(
+        'Click to view all healthy dependencies',
+        MarkdownHelper.createTable(
+          ['Product', 'Version', 'EOL Date', 'Latest'],
+          activeProducts.map(
+            (p) =>
+              `| ${p.product} | \`${p.release}\` | ${p.eolDate || 'N/A'} | \`${p.latestVersion || 'N/A'}\` |`
+          )
+        )
+      )
+    );
   }
 
-  lines.push('---');
   lines.push(
-    `*Last updated: ${new Date().toUTCString()} | [Report Link](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})*`
+    '---\n' +
+      `*Last updated: ${new Date().toUTCString()} | [Report Link](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})*`
   );
 
   return lines.join('\n');

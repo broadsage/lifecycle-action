@@ -15,10 +15,6 @@ inputs:
     required: false
     default: '{}'
   
-  cycles:
-    description: 'Alias for "releases" (deprecated, use "releases" instead)'
-    required: false
-  
   check-eol:
     description: 'Check if any tracked versions are end-of-life'
     required: false

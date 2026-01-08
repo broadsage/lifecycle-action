@@ -133,13 +133,19 @@ export class GitHubIntegration {
    */
   async upsertDashboardIssue(
     results: ActionResults,
-    title: string,
-    labels: string[]
+    title: string
   ): Promise<number | null> {
     const { owner, repo } = this.context.repo;
     const body = formatAsDashboard(results);
     const dashboardLabel = 'lifecycle-dashboard';
-    const allLabels = Array.from(new Set([...labels, dashboardLabel]));
+    const allLabels = [dashboardLabel];
+
+    // Ensure the dashboard label exists with a professional description
+    await this.ensureLabelExists(
+      dashboardLabel,
+      'Persistent dashboard for tracking software end-of-life (EOL) status and lifecycle updates.',
+      'fbca04' // Yellow color to make it stand out
+    );
 
     try {
       // Find existing dashboard issue
@@ -182,6 +188,49 @@ export class GitHubIntegration {
     } catch (error) {
       core.error(`Failed to upsert dashboard: ${getErrorMessage(error)}`);
       return null;
+    }
+  }
+
+  /**
+   * Ensure a label exists in the repository
+   */
+  async ensureLabelExists(
+    name: string,
+    description: string,
+    color: string = '0e8a16'
+  ): Promise<void> {
+    const { owner, repo } = this.context.repo;
+
+    try {
+      await this.octokit.rest.issues.getLabel({
+        owner,
+        repo,
+        name,
+      });
+      core.debug(`Label '${name}' already exists.`);
+    } catch (error: any) {
+      // GitHub API returns 404 if the label doesn't exist
+      if (error && error.status === 404) {
+        core.info(`Label '${name}' not found. Creating it...`);
+        try {
+          await this.octokit.rest.issues.createLabel({
+            owner,
+            repo,
+            name,
+            description,
+            color,
+          });
+          core.info(`Successfully created label: ${name}`);
+        } catch (createError) {
+          core.warning(
+            `Failed to create label '${name}': ${getErrorMessage(createError)}`
+          );
+        }
+      } else {
+        core.debug(
+          `Unexpected error while checking for label '${name}': ${getErrorMessage(error)}`
+        );
+      }
     }
   }
 }

@@ -102,6 +102,8 @@ describe('GitHubIntegration', () => {
                     createComment: jest.fn(),
                     addLabels: jest.fn(),
                     update: jest.fn(),
+                    getLabel: jest.fn(),
+                    createLabel: jest.fn(),
                 },
             },
         };
@@ -210,6 +212,92 @@ describe('GitHubIntegration', () => {
                 issue_number: 123,
                 state: 'closed',
             });
+        });
+    });
+
+    describe('upsertDashboardIssue', () => {
+        it('should create a new dashboard issue with only the tracking label', async () => {
+            mockOctokit.rest.issues.listForRepo.mockResolvedValue({
+                data: [],
+            });
+
+            mockOctokit.rest.issues.create.mockResolvedValue({
+                data: { number: 789 },
+            });
+
+            const issueNumber = await ghIntegration.upsertDashboardIssue(
+                mockResults,
+                'Dashboard Test'
+            );
+
+            expect(issueNumber).toBe(789);
+            expect(mockOctokit.rest.issues.create).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    labels: ['lifecycle-dashboard'],
+                })
+            );
+        });
+
+        it('should update an existing dashboard issue', async () => {
+            mockOctokit.rest.issues.listForRepo.mockResolvedValue({
+                data: [{ number: 101, title: 'Old Dashboard' }],
+            });
+
+            const issueNumber = await ghIntegration.upsertDashboardIssue(
+                mockResults,
+                'New Dashboard'
+            );
+
+            expect(issueNumber).toBe(101);
+            expect(mockOctokit.rest.issues.update).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    issue_number: 101,
+                    title: 'New Dashboard',
+                })
+            );
+        });
+    });
+
+    describe('ensureLabelExists', () => {
+        it('should create label if it does not exist', async () => {
+            mockOctokit.rest.issues.getLabel.mockRejectedValue({ status: 404 });
+            mockOctokit.rest.issues.createLabel.mockResolvedValue({});
+
+            await ghIntegration.ensureLabelExists('test-label', 'test-desc', 'ffffff');
+
+            expect(mockOctokit.rest.issues.getLabel).toHaveBeenCalledWith({
+                owner: 'test-owner',
+                repo: 'test-repo',
+                name: 'test-label',
+            });
+            expect(mockOctokit.rest.issues.createLabel).toHaveBeenCalledWith({
+                owner: 'test-owner',
+                repo: 'test-repo',
+                name: 'test-label',
+                description: 'test-desc',
+                color: 'ffffff',
+            });
+        });
+
+        it('should not create label if it already exists', async () => {
+            mockOctokit.rest.issues.getLabel.mockResolvedValue({ data: {} });
+
+            await ghIntegration.ensureLabelExists('existing-label', 'desc');
+
+            expect(mockOctokit.rest.issues.getLabel).toHaveBeenCalled();
+            expect(mockOctokit.rest.issues.createLabel).not.toHaveBeenCalled();
+        });
+
+        it('should handle unexpected errors gracefully', async () => {
+            mockOctokit.rest.issues.getLabel.mockRejectedValue(new Error('API Error'));
+
+            await ghIntegration.ensureLabelExists('error-label', 'desc');
+
+            expect(mockOctokit.rest.issues.getLabel).toHaveBeenCalled();
+            expect(mockOctokit.rest.issues.createLabel).not.toHaveBeenCalled();
+            expect(core.debug).toHaveBeenCalledWith(
+                expect.stringContaining('Unexpected error while checking for label')
+            );
         });
     });
 });

@@ -200,7 +200,11 @@ async function run(): Promise<void> {
     }
 
     // Initialize analyzer
-    const analyzer = new EolAnalyzer(client, inputs.eolThresholdDays);
+    const analyzer = new EolAnalyzer(
+      client,
+      inputs.eolThresholdDays,
+      inputs.stalenessThresholdDays
+    );
 
     // Analyze products
     const results = await core.group(
@@ -279,15 +283,10 @@ async function run(): Promise<void> {
     if (inputs.useDashboard && inputs.githubToken) {
       core.info('Upserting Software Lifecycle Dashboard...');
       const ghIntegration = new GitHubIntegration(inputs.githubToken);
-      const labels = inputs.issueLabels
-        .split(',')
-        .map((l) => l.trim())
-        .filter((l) => l.length > 0);
 
       const dashboardNumber = await ghIntegration.upsertDashboardIssue(
         results,
-        inputs.dashboardTitle,
-        labels
+        inputs.dashboardTitle
       );
 
       if (dashboardNumber) {

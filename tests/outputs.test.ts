@@ -209,13 +209,31 @@ describe('Output Formatting', () => {
     describe('formatAsDashboard', () => {
         const { formatAsDashboard } = require('../src/outputs');
 
-        it('should format results as a modern dashboard', () => {
+        it('should format results as a modern dashboard with legacy EOL', () => {
             const result = formatAsDashboard(mockResults);
 
             expect(result).toContain('# 🛡️ Software Lifecycle Dashboard');
             expect(result).toContain('### 📊 Status Overview');
             expect(result).toContain('> 🔴 **1** End-of-Life');
-            expect(result).toContain('## 🔴 Critical Attention Required');
+            expect(result).toContain('## 💾 Legacy End-of-Life');
+            expect(result).toContain('python');
+        });
+
+        it('should format results with recent EOL', () => {
+            // Create a date within the last 90 days (Today is 2026-01-08 in this context)
+            const recentDate = '2025-12-01';
+            const recentProduct: ProductVersionInfo = {
+                ...mockProduct,
+                eolDate: recentDate,
+            };
+            const results: ActionResults = {
+                ...mockResults,
+                eolProducts: [recentProduct],
+            };
+
+            const result = formatAsDashboard(results);
+            expect(result).toContain('## 🔴 Critical: Recent End-of-Life');
+            expect(result).toContain('Update to `2.7.18`');
         });
 
         it('should include healthy products section', () => {
