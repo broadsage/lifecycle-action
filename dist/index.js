@@ -58065,17 +58065,39 @@ function formatAsDashboard(results) {
     lines.push('### 📊 Status Overview');
     lines.push(`> 🔴 **${eolCount}** End-of-Life | 🟠 **${approachingCount}** Warning | 🟢 **${healthyCount}** Healthy`);
     lines.push('');
-    if (results.eolProducts.length > 0) {
-        lines.push('## 🔴 Critical Attention Required');
-        lines.push('The following versions have reached End-of-Life:');
+    // Define "Recent" as within the last 90 days
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    const recentEol = [];
+    const legacyEol = [];
+    for (const p of results.eolProducts) {
+        if (p.eolDate) {
+            const eolDate = new Date(p.eolDate);
+            if (eolDate >= ninetyDaysAgo) {
+                recentEol.push(p);
+            }
+            else {
+                legacyEol.push(p);
+            }
+        }
+        else {
+            // If no date but marked as EOL, consider it legacy/unknown
+            legacyEol.push(p);
+        }
+    }
+    // 1. Critical Attention (Recent EOL)
+    if (recentEol.length > 0) {
+        lines.push('## 🔴 Critical: Recent End-of-Life');
+        lines.push('The following versions have reached End-of-Life within the last 90 days. immediate action is highly recommended.');
         lines.push('');
         lines.push('| Product | Version | EOL Date | Recommended |');
         lines.push('| :--- | :--- | :--- | :--- |');
-        for (const p of results.eolProducts) {
+        for (const p of recentEol) {
             lines.push(`| **${p.product}** | \`${p.release}\` | ${p.eolDate} | Update to \`${p.latestVersion || 'latest'}\` |`);
         }
         lines.push('');
     }
+    // 2. Upcoming Risks (Approaching EOL)
     if (results.approachingEolProducts.length > 0) {
         lines.push('## 🟠 Upcoming Risks');
         lines.push('These versions are approaching EOL soon. Plan your migration.');
@@ -58087,6 +58109,21 @@ function formatAsDashboard(results) {
         }
         lines.push('');
     }
+    // 3. Legacy EOL (Collapsed)
+    if (legacyEol.length > 0) {
+        lines.push('## 💾 Legacy End-of-Life');
+        lines.push('<details><summary>Click to view products that have been EOL for more than 90 days</summary>');
+        lines.push('');
+        lines.push('| Product | Version | EOL Date | Latest Version |');
+        lines.push('| :--- | :--- | :--- | :--- |');
+        for (const p of legacyEol) {
+            lines.push(`| ${p.product} | \`${p.release}\` | ${p.eolDate || 'N/A'} | \`${p.latestVersion || 'N/A'}\` |`);
+        }
+        lines.push('');
+        lines.push('</details>');
+        lines.push('');
+    }
+    // 4. Stale (Maintenance)
     if (results.staleProducts.length > 0) {
         lines.push('## ⏰ Maintenance Required');
         lines.push('No updates have been released for these versions in over a year.');
@@ -58098,6 +58135,7 @@ function formatAsDashboard(results) {
         }
         lines.push('');
     }
+    // 5. Active (Collapsed)
     const activeProducts = results.products.filter((p) => p.status === types_1.EolStatus.ACTIVE);
     if (activeProducts.length > 0) {
         lines.push('## 🟢 Healthy & Supported');
