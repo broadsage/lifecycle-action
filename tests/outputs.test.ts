@@ -83,7 +83,8 @@ describe('Output Formatting', () => {
             const result = formatAsMarkdown(mockResults);
 
             expect(result).toContain('# 📊 Software Lifecycle Analysis Report');
-            expect(result).toContain('### 📓 Summary of Findings');
+            expect(result).toContain('### 📓 Summary of Findings\n');
+            expect(result).toContain('---\n');
             expect(result).toContain('❌ **1** EOL');
             expect(result).toContain('✅ **0** Healthy');
             expect(result).toContain('<details><summary>❌ CRITICAL: 1 End-of-Life versions detected</summary>');
@@ -647,7 +648,8 @@ describe('Output Formatting', () => {
 
             const markdown = (core.summary.addRaw as jest.Mock).mock.calls[0][0];
 
-            expect(markdown).toContain('### 📓 Summary of Findings');
+            expect(markdown).toContain('### 📓 Summary of Findings\n');
+            expect(markdown).toContain('---\n');
             expect(markdown).toContain('<details><summary>❌ CRITICAL: 1 End-of-Life versions detected</summary>');
         });
     });

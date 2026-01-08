@@ -57888,7 +57888,7 @@ function formatAsMarkdown(results) {
     const discontinuedCount = results.discontinuedProducts.length;
     const activeProducts = results.products.filter((p) => p.status === types_1.EolStatus.ACTIVE);
     // Overview Section
-    lines.push('### 📓 Summary of Findings');
+    lines.push('### 📓 Summary of Findings\n');
     const summaryLine = [
         eolCount > 0 ? `❌ **${eolCount}** EOL` : null,
         approachingCount > 0 ? `⚠️ **${approachingCount}** Warning` : null,
@@ -57899,6 +57899,7 @@ function formatAsMarkdown(results) {
         .join(' &nbsp;•&nbsp; ');
     lines.push(`> ${summaryLine}\n`);
     lines.push(`*Analyzed **${results.totalReleasesChecked}** releases across **${results.totalProductsChecked}** products.*\n`);
+    lines.push('---\n');
     // Analysis Details with Collapsible Sections
     if (eolCount > 0) {
         const table = MarkdownHelper.createTable(['Product', 'Release', 'EOL Date', 'Latest Version', 'LTS'], results.eolProducts.map((p) => MarkdownHelper.formatProductRow(p, 'standard')));

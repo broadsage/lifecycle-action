@@ -89,7 +89,7 @@ export function formatAsMarkdown(results: ActionResults): string {
   );
 
   // Overview Section
-  lines.push('### 📓 Summary of Findings');
+  lines.push('### 📓 Summary of Findings\n');
   const summaryLine = [
     eolCount > 0 ? `❌ **${eolCount}** EOL` : null,
     approachingCount > 0 ? `⚠️ **${approachingCount}** Warning` : null,
@@ -103,6 +103,7 @@ export function formatAsMarkdown(results: ActionResults): string {
   lines.push(
     `*Analyzed **${results.totalReleasesChecked}** releases across **${results.totalProductsChecked}** products.*\n`
   );
+  lines.push('---\n');
 
   // Analysis Details with Collapsible Sections
   if (eolCount > 0) {
