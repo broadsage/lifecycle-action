@@ -84,8 +84,9 @@ describe('Output Formatting', () => {
 
             expect(result).toContain('# 📊 Software Lifecycle Analysis Report');
             expect(result).toContain('### 📓 Summary of Findings');
-            expect(result).toContain('Test summary');
-            expect(result).toContain('<details><summary>❌ **1** End-of-Life versions detected</summary>');
+            expect(result).toContain('❌ **1** EOL');
+            expect(result).toContain('✅ **0** Healthy');
+            expect(result).toContain('<details><summary>❌ **CRITICAL:** 1 End-of-Life versions detected</summary>');
         });
 
         it('should include EOL products table', () => {
@@ -111,7 +112,7 @@ describe('Output Formatting', () => {
 
             const result = formatAsMarkdown(results);
 
-            expect(result).toContain('<details><summary>⚠️ **1** versions approaching End-of-Life</summary>');
+            expect(result).toContain('<details><summary>⚠️ **WARNING:** 1 versions approaching End-of-Life</summary>');
             expect(result).toContain('Days Until EOL');
         });
 
@@ -145,7 +146,7 @@ describe('Output Formatting', () => {
 
             const result = formatAsMarkdown(results);
 
-            expect(result).toContain('<details><summary>✅ **1** versions with active support</summary>');
+            expect(result).toContain('<details><summary>✅ **HEALTHY:** 1 versions with active support</summary>');
         });
 
         it('should handle LTS indicators', () => {
@@ -180,7 +181,7 @@ describe('Output Formatting', () => {
 
             const result = formatAsMarkdown(results);
 
-            expect(result).toContain('<details><summary>⏰ **1** stale versions detected</summary>');
+            expect(result).toContain('<details><summary>⏰ **STALE:** 1 stale versions detected</summary>');
             expect(result).toContain('3.6');
             expect(result).toContain('2018-12-24');
         });
@@ -647,7 +648,7 @@ describe('Output Formatting', () => {
             const markdown = (core.summary.addRaw as jest.Mock).mock.calls[0][0];
 
             expect(markdown).toContain('### 📓 Summary of Findings');
-            expect(markdown).toContain('<details><summary>❌ **1** End-of-Life versions detected</summary>');
+            expect(markdown).toContain('<details><summary>❌ **CRITICAL:** 1 End-of-Life versions detected</summary>');
         });
     });
 
