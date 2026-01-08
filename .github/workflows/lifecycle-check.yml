@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2025 Broadsage
+
+name: 'Software Lifecycle Check'
+
+on:
+  schedule:
+    - cron: '30 2 * * 1' # Every Monday at 02:30 UTC
+  push:
+    branches:
+      - main
+    paths:
+      - 'package.json'
+      - '.github/workflows/lifecycle-check.yml'
+  workflow_dispatch: # Allow manual triggering
+
+permissions:
+  contents: read
+  issues: write # Required for creating/updating the dashboard and EOL issues
+
+jobs:
+  lifecycle-analysis:
+    name: 'Lifecycle Analysis'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Run Software Lifecycle Tracker
+        uses: ./ # Use the action from the current repository
+        with:
+          # Track the runtime and the environment we care about
+          products: 'nodejs,ubuntu'
+          
+          # Use local files to detect versions
+          # package.json defines the engine version
+          file-path: 'package.json'
+          file-key: 'engines.node'
+          
+          # Configuration for proactive monitoring
+          use-dashboard: true
+          create-issue-on-eol: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Reporting preferences
+          output-format: 'summary'
+          eol-threshold-days: 120 # Warn 4 months in advance
