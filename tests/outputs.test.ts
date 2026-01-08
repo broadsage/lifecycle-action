@@ -284,7 +284,8 @@ describe('Output Formatting', () => {
             };
 
             const result = formatAsDashboard(results);
-            expect(result).toContain('⏰ Maintenance Required');
+            expect(result).toContain('## ⏰ Maintenance Required');
+            expect(result).toContain('<details><summary>Click to view products with no updates for a long time</summary>');
             expect(result).toContain('| **python** | `3.6` | 2018-12-24 | `1800` days stale |');
         });
     });

@@ -58125,8 +58125,8 @@ function formatAsDashboard(results) {
         lines.push(MarkdownHelper.createDetails('Click to view products EOL for > 90 days', MarkdownHelper.createTable(['Product', 'Version', 'EOL Date', 'LTS', 'Latest'], legacyEol.map((p) => `| ${p.product} | \`${p.release}\` | ${p.eolDate || 'N/A'} | ${p.isLts ? '✓' : '✗'} | \`${p.latestVersion || 'N/A'}\` |`))));
     }
     if (results.staleProducts.length > 0) {
-        lines.push(MarkdownHelper.createSection('⏰ Maintenance Required', 'No updates released for over a year.'));
-        lines.push(MarkdownHelper.createTable(['Product', 'Version', 'Last Update', 'Status'], results.staleProducts.map((p) => MarkdownHelper.formatProductRow(p, 'stale'))));
+        lines.push('## ⏰ Maintenance Required');
+        lines.push(MarkdownHelper.createDetails('Click to view products with no updates for a long time', MarkdownHelper.createTable(['Product', 'Version', 'Last Update', 'Status'], results.staleProducts.map((p) => MarkdownHelper.formatProductRow(p, 'stale')))));
     }
     const activeProducts = results.products.filter((p) => p.status === types_1.EolStatus.ACTIVE);
     if (activeProducts.length > 0) {

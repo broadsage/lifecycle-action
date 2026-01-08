@@ -484,17 +484,15 @@ export function formatAsDashboard(results: ActionResults): string {
   }
 
   if (results.staleProducts.length > 0) {
+    lines.push('## ⏰ Maintenance Required');
     lines.push(
-      MarkdownHelper.createSection(
-        '⏰ Maintenance Required',
-        'No updates released for over a year.'
-      )
-    );
-    lines.push(
-      MarkdownHelper.createTable(
-        ['Product', 'Version', 'Last Update', 'Status'],
-        results.staleProducts.map((p) =>
-          MarkdownHelper.formatProductRow(p, 'stale')
+      MarkdownHelper.createDetails(
+        'Click to view products with no updates for a long time',
+        MarkdownHelper.createTable(
+          ['Product', 'Version', 'Last Update', 'Status'],
+          results.staleProducts.map((p) =>
+            MarkdownHelper.formatProductRow(p, 'stale')
+          )
         )
       )
     );
