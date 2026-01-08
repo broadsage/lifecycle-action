@@ -251,6 +251,41 @@ describe('Output Formatting', () => {
             expect(result).toContain('## 🟢 Healthy & Supported');
             expect(result).toContain('| python | `3.11` | 2020-01-01 | ✗ | `2.7.18` |');
         });
+
+        it('should include approaching EOL section', () => {
+            const approachingProduct: ProductVersionInfo = {
+                ...mockProduct,
+                status: EolStatus.APPROACHING_EOL,
+                release: '3.10',
+                daysUntilEol: 30,
+                eolDate: '2025-02-01',
+            };
+            const results: ActionResults = {
+                ...mockResults,
+                approachingEolProducts: [approachingProduct],
+            };
+
+            const result = formatAsDashboard(results);
+            expect(result).toContain('🟠 Upcoming Risks');
+            expect(result).toContain('| **python** | `3.10` | 2025-02-01 | ✗ | `30` days |');
+        });
+
+        it('should include stale products section', () => {
+            const staleProduct: ProductVersionInfo = {
+                ...mockProduct,
+                release: '3.6',
+                latestReleaseDate: '2018-12-24',
+                daysSinceLatestRelease: 1800,
+            };
+            const results: ActionResults = {
+                ...mockResults,
+                staleProducts: [staleProduct],
+            };
+
+            const result = formatAsDashboard(results);
+            expect(result).toContain('⏰ Maintenance Required');
+            expect(result).toContain('| **python** | `3.6` | 2018-12-24 | `1800` days stale |');
+        });
     });
 
     describe('createIssueBody', () => {

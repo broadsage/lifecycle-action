@@ -33,7 +33,7 @@ import {
 /**
  * Main action entry point
  */
-async function run(): Promise<void> {
+export async function run(): Promise<void> {
   try {
     core.info('🚀 Starting Software Lifecycle Tracker...');
 
@@ -357,5 +357,7 @@ async function run(): Promise<void> {
   }
 }
 
-// Run the action
-void run();
+// Run the action if this is the main module
+if (require.main === module) {
+  void run();
+}

@@ -56032,6 +56032,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.run = run;
 const core = __importStar(__nccwpck_require__(37484));
 const client_1 = __nccwpck_require__(9592);
 const analyzer_1 = __nccwpck_require__(98561);
@@ -56297,8 +56298,10 @@ async function run() {
         }
     }
 }
-// Run the action
-void run();
+// Run the action if this is the main module
+if (require.main === require.cache[eval('__filename')]) {
+    void run();
+}
 
 
 /***/ }),
@@ -57830,7 +57833,7 @@ class MarkdownHelper {
     static formatProductRow(p, type) {
         switch (type) {
             case 'dashboard':
-                return `| **${p.product}** | \`${p.release}\` | ${p.eolDate || 'N/A'} | Update to \`${p.latestVersion || 'latest'}\` |`;
+                return `| **${p.product}** | \`${p.release}\` | ${p.eolDate || 'N/A'} | ${p.isLts ? '✓' : '✗'} | Update to \`${p.latestVersion || 'latest'}\` |`;
             case 'stale':
                 return `| **${p.product}** | \`${p.release}\` | ${p.latestReleaseDate || 'N/A'} | \`${p.daysSinceLatestRelease}\` days stale |`;
             case 'discontinued':
@@ -57873,44 +57876,54 @@ function formatAsJson(results) {
 /**
  * Format results as Markdown
  */
+/**
+ * Format results as Markdown for GitHub Step Summary
+ */
 function formatAsMarkdown(results) {
     const lines = [];
     lines.push('# 📊 Software Lifecycle Analysis Report\n');
-    lines.push(`**Total Products Checked:** ${results.totalProductsChecked}`);
-    lines.push(`**Total Releases Checked:** ${results.totalReleasesChecked}\n`);
-    if (results.eolProducts.length > 0) {
-        lines.push(MarkdownHelper.createSection('❌ End-of-Life Detected'));
-        lines.push(MarkdownHelper.createTable(['Product', 'Release', 'EOL Date', 'Latest Version', 'LTS'], results.eolProducts.map((p) => MarkdownHelper.formatProductRow(p, 'standard'))));
+    // Overview Section
+    lines.push('### 📓 Summary of Findings');
+    lines.push(`> ${results.summary}\n`);
+    const eolCount = results.eolProducts.length;
+    const approachingCount = results.approachingEolProducts.length;
+    const staleCount = results.staleProducts.length;
+    const discontinuedCount = results.discontinuedProducts.length;
+    // Analysis Details with Collapsible Sections
+    if (eolCount > 0) {
+        const table = MarkdownHelper.createTable(['Product', 'Release', 'EOL Date', 'Latest Version', 'LTS'], results.eolProducts.map((p) => MarkdownHelper.formatProductRow(p, 'standard')));
+        lines.push(MarkdownHelper.createDetails(`❌ **${eolCount}** End-of-Life versions detected`, `**Description:** The following software versions have reached their End-of-Life (EOL) date. They no longer receive security updates or bug fixes and should be upgraded immediately to the latest supported versions.\n\n${table}`));
     }
-    if (results.approachingEolProducts.length > 0) {
-        lines.push(MarkdownHelper.createSection('⚠️ Approaching End-of-Life'));
-        lines.push(MarkdownHelper.createTable([
+    if (approachingCount > 0) {
+        const table = MarkdownHelper.createTable([
             'Product',
             'Release',
             'Days Until EOL',
             'EOL Date',
             'Latest Version',
             'LTS',
-        ], results.approachingEolProducts.map((p) => `| ${p.product} | ${p.release} | ${p.daysUntilEol || 'N/A'} | ${p.eolDate || 'N/A'} | ${p.latestVersion || 'N/A'} | ${p.isLts ? '✓' : '✗'} |`)));
+        ], results.approachingEolProducts.map((p) => `| ${p.product} | ${p.release} | ${p.daysUntilEol || 'N/A'} | ${p.eolDate || 'N/A'} | ${p.latestVersion || 'N/A'} | ${p.isLts ? '✓' : '✗'} |`));
+        lines.push(MarkdownHelper.createDetails(`⚠️ **${approachingCount}** versions approaching End-of-Life`, `**Description:** These versions are nearing their maintenance cutoff. Planning upgrades now will ensure a smooth transition before support ends.\n\n${table}`));
     }
-    if (results.staleProducts.length > 0) {
-        lines.push(MarkdownHelper.createSection('⏰ Stale Versions'));
-        lines.push(MarkdownHelper.createTable(['Product', 'Release', 'Last Release Date', 'Days Since Latest'], results.staleProducts.map((p) => MarkdownHelper.formatProductRow(p, 'stale'))));
+    if (staleCount > 0) {
+        const table = MarkdownHelper.createTable(['Product', 'Release', 'Last Release Date', 'Days Since Latest'], results.staleProducts.map((p) => MarkdownHelper.formatProductRow(p, 'stale')));
+        lines.push(MarkdownHelper.createDetails(`⏰ **${staleCount}** stale versions detected`, `**Description:** These products haven't seen an update in over a year (or your configured threshold). While they may still be supported, they might be missing recent stability or performance improvements.\n\n${table}`));
     }
-    if (results.discontinuedProducts.length > 0) {
-        lines.push(MarkdownHelper.createSection('🚫 Discontinued Products'));
-        lines.push(MarkdownHelper.createTable(['Product', 'Release', 'Discontinued Date'], results.discontinuedProducts.map((p) => MarkdownHelper.formatProductRow(p, 'discontinued'))));
+    if (discontinuedCount > 0) {
+        const table = MarkdownHelper.createTable(['Product', 'Release', 'Discontinued Date'], results.discontinuedProducts.map((p) => MarkdownHelper.formatProductRow(p, 'discontinued')));
+        lines.push(MarkdownHelper.createDetails(`🚫 **${discontinuedCount}** discontinued products`, `**Description:** These products have been discontinued by their maintainers. It is recommended to look for alternative solutions.\n\n${table}`));
     }
     const activeProducts = results.products.filter((p) => p.status === types_1.EolStatus.ACTIVE);
     if (activeProducts.length > 0) {
-        lines.push(MarkdownHelper.createSection('✅ Active Support'));
-        lines.push(MarkdownHelper.createTable(['Product', 'Release', 'EOL Date', 'Latest Version', 'LTS'], activeProducts.map((p) => MarkdownHelper.formatProductRow(p, 'standard'))));
+        const table = MarkdownHelper.createTable(['Product', 'Release', 'EOL Date', 'Latest Version', 'LTS'], activeProducts.map((p) => MarkdownHelper.formatProductRow(p, 'standard')));
+        lines.push(MarkdownHelper.createDetails(`✅ **${activeProducts.length}** versions with active support`, `**Description:** These versions are fully supported and up to date.\n\n${table}`));
     }
-    if (results.eolProducts.length === 0 &&
-        results.approachingEolProducts.length === 0) {
-        lines.push('## ✅ All Clear!');
-        lines.push('All tracked versions are actively supported.\n');
+    if (eolCount === 0 && approachingCount === 0) {
+        lines.push('\n### ✅ All Clear!');
+        lines.push('All tracked versions are actively supported and secure.\n');
     }
+    lines.push('\n---\n');
+    lines.push(`*Report generated by [Software Lifecycle Tracker](https://github.com/broadsage/lifecycle-action)*`);
     return lines.join('\n');
 }
 /**
@@ -58092,15 +58105,15 @@ function formatAsDashboard(results) {
     const legacyEol = results.eolProducts.filter((p) => !p.eolDate || new Date(p.eolDate) < ninetyDaysAgo);
     if (recentEol.length > 0) {
         lines.push(MarkdownHelper.createSection('🔴 Critical: Recent End-of-Life', 'Immediate action recommended (EOL within last 90 days).'));
-        lines.push(MarkdownHelper.createTable(['Product', 'Version', 'EOL Date', 'Recommended'], recentEol.map((p) => MarkdownHelper.formatProductRow(p, 'dashboard'))));
+        lines.push(MarkdownHelper.createTable(['Product', 'Version', 'EOL Date', 'LTS', 'Recommended'], recentEol.map((p) => MarkdownHelper.formatProductRow(p, 'dashboard'))));
     }
     if (results.approachingEolProducts.length > 0) {
         lines.push(MarkdownHelper.createSection('🟠 Upcoming Risks', 'Plan migration before these versions reach End-of-Life.'));
-        lines.push(MarkdownHelper.createTable(['Product', 'Version', 'EOL Date', 'Days Left'], results.approachingEolProducts.map((p) => `| **${p.product}** | \`${p.release}\` | ${p.eolDate} | \`${p.daysUntilEol}\` days |`)));
+        lines.push(MarkdownHelper.createTable(['Product', 'Version', 'EOL Date', 'LTS', 'Days Left'], results.approachingEolProducts.map((p) => `| **${p.product}** | \`${p.release}\` | ${p.eolDate} | ${p.isLts ? '✓' : '✗'} | \`${p.daysUntilEol}\` days |`)));
     }
     if (legacyEol.length > 0) {
         lines.push('## 💾 Legacy End-of-Life');
-        lines.push(MarkdownHelper.createDetails('Click to view products EOL for > 90 days', MarkdownHelper.createTable(['Product', 'Version', 'EOL Date', 'Latest'], legacyEol.map((p) => `| ${p.product} | \`${p.release}\` | ${p.eolDate || 'N/A'} | \`${p.latestVersion || 'N/A'}\` |`))));
+        lines.push(MarkdownHelper.createDetails('Click to view products EOL for > 90 days', MarkdownHelper.createTable(['Product', 'Version', 'EOL Date', 'LTS', 'Latest'], legacyEol.map((p) => `| ${p.product} | \`${p.release}\` | ${p.eolDate || 'N/A'} | ${p.isLts ? '✓' : '✗'} | \`${p.latestVersion || 'N/A'}\` |`))));
     }
     if (results.staleProducts.length > 0) {
         lines.push(MarkdownHelper.createSection('⏰ Maintenance Required', 'No updates released for over a year.'));
@@ -58109,7 +58122,7 @@ function formatAsDashboard(results) {
     const activeProducts = results.products.filter((p) => p.status === types_1.EolStatus.ACTIVE);
     if (activeProducts.length > 0) {
         lines.push('## 🟢 Healthy & Supported');
-        lines.push(MarkdownHelper.createDetails('Click to view all healthy dependencies', MarkdownHelper.createTable(['Product', 'Version', 'EOL Date', 'Latest'], activeProducts.map((p) => `| ${p.product} | \`${p.release}\` | ${p.eolDate || 'N/A'} | \`${p.latestVersion || 'N/A'}\` |`))));
+        lines.push(MarkdownHelper.createDetails('Click to view all healthy dependencies', MarkdownHelper.createTable(['Product', 'Version', 'EOL Date', 'LTS', 'Latest'], activeProducts.map((p) => `| ${p.product} | \`${p.release}\` | ${p.eolDate || 'N/A'} | ${p.isLts ? '✓' : '✗'} | \`${p.latestVersion || 'N/A'}\` |`))));
     }
     lines.push('---\n' +
         `*Last updated: ${new Date().toUTCString()} | [Report Link](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})*`);
