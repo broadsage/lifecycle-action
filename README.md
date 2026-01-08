@@ -1,6 +1,7 @@
 # 🛡️ Software Lifecycle Tracker
 
 [![CI](https://github.com/broadsage/lifecycle-action/workflows/CI/badge.svg)](https://github.com/broadsage/lifecycle-action/actions)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/broadsage/lifecycle-action/badge)](https://securityscorecards.dev/viewer/?uri=github.com/broadsage/lifecycle-action)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![GitHub release](https://img.shields.io/github/release/broadsage/lifecycle-action.svg)](https://github.com/broadsage/lifecycle-action/releases)
 [![Marketplace](https://img.shields.io/badge/GitHub-Marketplace-blue)](https://github.com/marketplace/actions/software-lifecycle-tracker)
