@@ -55887,11 +55887,14 @@ class GitHubIntegration {
     /**
      * Create or update the Lifecycle Dashboard issue
      */
-    async upsertDashboardIssue(results, title, labels) {
+    async upsertDashboardIssue(results, title) {
         const { owner, repo } = this.context.repo;
         const body = (0, outputs_1.formatAsDashboard)(results);
         const dashboardLabel = 'lifecycle-dashboard';
-        const allLabels = Array.from(new Set([...labels, dashboardLabel]));
+        const allLabels = [dashboardLabel];
+        // Ensure the dashboard label exists with a professional description
+        await this.ensureLabelExists(dashboardLabel, 'Persistent dashboard for tracking software end-of-life (EOL) status and lifecycle updates.', 'fbca04' // Yellow color to make it stand out
+        );
         try {
             // Find existing dashboard issue
             const issues = await this.octokit.rest.issues.listForRepo({
@@ -55928,6 +55931,42 @@ class GitHubIntegration {
         catch (error) {
             core.error(`Failed to upsert dashboard: ${(0, error_utils_1.getErrorMessage)(error)}`);
             return null;
+        }
+    }
+    /**
+     * Ensure a label exists in the repository
+     */
+    async ensureLabelExists(name, description, color = '0e8a16') {
+        const { owner, repo } = this.context.repo;
+        try {
+            await this.octokit.rest.issues.getLabel({
+                owner,
+                repo,
+                name,
+            });
+            core.debug(`Label '${name}' already exists.`);
+        }
+        catch (error) {
+            // GitHub API returns 404 if the label doesn't exist
+            if (error && error.status === 404) {
+                core.info(`Label '${name}' not found. Creating it...`);
+                try {
+                    await this.octokit.rest.issues.createLabel({
+                        owner,
+                        repo,
+                        name,
+                        description,
+                        color,
+                    });
+                    core.info(`Successfully created label: ${name}`);
+                }
+                catch (createError) {
+                    core.warning(`Failed to create label '${name}': ${(0, error_utils_1.getErrorMessage)(createError)}`);
+                }
+            }
+            else {
+                core.debug(`Unexpected error while checking for label '${name}': ${(0, error_utils_1.getErrorMessage)(error)}`);
+            }
         }
     }
 }
@@ -56186,11 +56225,7 @@ async function run() {
         if (inputs.useDashboard && inputs.githubToken) {
             core.info('Upserting Software Lifecycle Dashboard...');
             const ghIntegration = new github_1.GitHubIntegration(inputs.githubToken);
-            const labels = inputs.issueLabels
-                .split(',')
-                .map((l) => l.trim())
-                .filter((l) => l.length > 0);
-            const dashboardNumber = await ghIntegration.upsertDashboardIssue(results, inputs.dashboardTitle, labels);
+            const dashboardNumber = await ghIntegration.upsertDashboardIssue(results, inputs.dashboardTitle);
             if (dashboardNumber) {
                 core.info(`Dashboard updated: #${dashboardNumber}`);
                 core.setOutput('dashboard-issue-number', dashboardNumber);
