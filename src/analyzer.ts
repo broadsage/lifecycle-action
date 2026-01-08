@@ -14,7 +14,8 @@ import { EndOfLifeClient } from './client';
 export class EolAnalyzer {
   constructor(
     private client: EndOfLifeClient,
-    private eolThresholdDays: number
+    private eolThresholdDays: number,
+    private stalenessThresholdDays: number = 365
   ) {}
 
   /**
@@ -283,7 +284,9 @@ export class EolAnalyzer {
     const discontinuedProducts = products.filter((p) => p.isDiscontinued);
     // Stale is determined by days since latest release (e.g., > 1 year)
     const staleProducts = products.filter(
-      (p) => p.daysSinceLatestRelease !== null && p.daysSinceLatestRelease > 365
+      (p) =>
+        p.daysSinceLatestRelease !== null &&
+        p.daysSinceLatestRelease > this.stalenessThresholdDays
     );
 
     const latestVersions: Record<string, string> = {};

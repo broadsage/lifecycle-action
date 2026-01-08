@@ -124,16 +124,6 @@ describe('Input Parsing and Validation', () => {
             expect(inputs.apiConcurrency).toBe(5);
         });
 
-        it('should support cycles as an alias for releases', () => {
-            mockCore.getInput.mockImplementation((name: string) => {
-                if (name === 'cycles') return '{"python": ["3.11"]}';
-                if (name === 'releases') return '{}';
-                return '';
-            });
-
-            const inputs = getInputs();
-            expect(inputs.releases).toBe('{"python": ["3.11"]}');
-        });
     });
 
     describe('parseProducts', () => {

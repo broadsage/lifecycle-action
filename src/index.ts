@@ -200,7 +200,11 @@ async function run(): Promise<void> {
     }
 
     // Initialize analyzer
-    const analyzer = new EolAnalyzer(client, inputs.eolThresholdDays);
+    const analyzer = new EolAnalyzer(
+      client,
+      inputs.eolThresholdDays,
+      inputs.stalenessThresholdDays
+    );
 
     // Analyze products
     const results = await core.group(
