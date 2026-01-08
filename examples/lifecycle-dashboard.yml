@@ -22,7 +22,7 @@ jobs:
           # Track all key infrastructure products
           products: 'python,nodejs,ubuntu,postgresql,redis,kubernetes'
           
-          # Enable the dashboard (Phase 6)
+          # Enable the dashboard
           use-dashboard: true
           
           # Custom dashboard title
