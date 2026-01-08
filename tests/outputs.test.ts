@@ -83,8 +83,9 @@ describe('Output Formatting', () => {
             const result = formatAsMarkdown(mockResults);
 
             expect(result).toContain('# 📊 Software Lifecycle Analysis Report');
-            expect(result).toContain('**Total Products Checked:** 1');
-            expect(result).toContain('## ❌ End-of-Life Detected');
+            expect(result).toContain('### 📓 Summary of Findings');
+            expect(result).toContain('Test summary');
+            expect(result).toContain('<details><summary>❌ **1** End-of-Life versions detected</summary>');
         });
 
         it('should include EOL products table', () => {
@@ -110,7 +111,7 @@ describe('Output Formatting', () => {
 
             const result = formatAsMarkdown(results);
 
-            expect(result).toContain('## ⚠️ Approaching End-of-Life');
+            expect(result).toContain('<details><summary>⚠️ **1** versions approaching End-of-Life</summary>');
             expect(result).toContain('Days Until EOL');
         });
 
@@ -144,7 +145,7 @@ describe('Output Formatting', () => {
 
             const result = formatAsMarkdown(results);
 
-            expect(result).toContain('## ✅ Active Support');
+            expect(result).toContain('<details><summary>✅ **1** versions with active support</summary>');
         });
 
         it('should handle LTS indicators', () => {
@@ -179,7 +180,7 @@ describe('Output Formatting', () => {
 
             const result = formatAsMarkdown(results);
 
-            expect(result).toContain('## ⏰ Stale Versions');
+            expect(result).toContain('<details><summary>⏰ **1** stale versions detected</summary>');
             expect(result).toContain('3.6');
             expect(result).toContain('2018-12-24');
         });
@@ -200,7 +201,7 @@ describe('Output Formatting', () => {
 
             const result = formatAsMarkdown(results);
 
-            expect(result).toContain('## 🚫 Discontinued Products');
+            expect(result).toContain('<details><summary>🚫 **1** discontinued products</summary>');
             expect(result).toContain('10.0');
             expect(result).toContain('2023-01-01');
         });
@@ -611,8 +612,8 @@ describe('Output Formatting', () => {
 
             const markdown = (core.summary.addRaw as jest.Mock).mock.calls[0][0];
 
-            expect(markdown).toContain('**Total Products Checked:** 1');
-            expect(markdown).toContain('## ❌ End-of-Life Detected');
+            expect(markdown).toContain('### 📓 Summary of Findings');
+            expect(markdown).toContain('<details><summary>❌ **1** End-of-Life versions detected</summary>');
         });
     });
 
