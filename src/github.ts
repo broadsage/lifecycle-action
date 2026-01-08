@@ -213,7 +213,9 @@ export class GitHubIntegration {
         existingLabel.description !== description ||
         existingLabel.color.toLowerCase() !== color.toLowerCase()
       ) {
-        core.info(`Updating label '${name}' with correct description and color...`);
+        core.info(
+          `Updating label '${name}' with correct description and color...`
+        );
         await this.octokit.rest.issues.updateLabel({
           owner,
           repo,
