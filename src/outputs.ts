@@ -89,7 +89,7 @@ export function formatAsMarkdown(results: ActionResults): string {
   );
 
   // Overview Section
-  lines.push('### 📓 Summary of Findings\n');
+  lines.push('### 📓 Summary of Findings');
   const summaryLine = [
     eolCount > 0 ? `❌ **${eolCount}** EOL` : null,
     approachingCount > 0 ? `⚠️ **${approachingCount}** Warning` : null,
@@ -103,7 +103,6 @@ export function formatAsMarkdown(results: ActionResults): string {
   lines.push(
     `*Analyzed **${results.totalReleasesChecked}** releases across **${results.totalProductsChecked}** products.*\n`
   );
-  lines.push('---\n');
 
   // Analysis Details with Collapsible Sections
   if (eolCount > 0) {
@@ -116,7 +115,7 @@ export function formatAsMarkdown(results: ActionResults): string {
     lines.push(
       MarkdownHelper.createDetails(
         `❌ CRITICAL: ${eolCount} End-of-Life versions detected`,
-        `\n**Description:** The following software versions have reached their End-of-Life (EOL) date. They no longer receive security updates or bug fixes and should be upgraded immediately to the latest supported versions.\n\n${table}`
+        `**Description:** The following software versions have reached their End-of-Life (EOL) date. They no longer receive security updates or bug fixes and should be upgraded immediately to the latest supported versions.\n\n${table}`
       )
     );
   }
@@ -139,7 +138,7 @@ export function formatAsMarkdown(results: ActionResults): string {
     lines.push(
       MarkdownHelper.createDetails(
         `⚠️ WARNING: ${approachingCount} versions approaching End-of-Life`,
-        `\n**Description:** These versions are nearing their maintenance cutoff. Planning upgrades now will ensure a smooth transition before support ends.\n\n${table}`
+        `**Description:** These versions are nearing their maintenance cutoff. Planning upgrades now will ensure a smooth transition before support ends.\n\n${table}`
       )
     );
   }
@@ -154,7 +153,7 @@ export function formatAsMarkdown(results: ActionResults): string {
     lines.push(
       MarkdownHelper.createDetails(
         `⏰ STALE: ${staleCount} stale versions detected`,
-        `\n**Description:** These products haven't seen an update in over a year (or your configured threshold). While they may still be supported, they might be missing recent stability or performance improvements.\n\n${table}`
+        `**Description:** These products haven't seen an update in over a year (or your configured threshold). While they may still be supported, they might be missing recent stability or performance improvements.\n\n${table}`
       )
     );
   }
@@ -182,7 +181,7 @@ export function formatAsMarkdown(results: ActionResults): string {
     lines.push(
       MarkdownHelper.createDetails(
         `✅ HEALTHY: ${activeProducts.length} versions with active support`,
-        `\n**Description:** These versions are fully supported and up to date.\n\n${table}`
+        `**Description:** These versions are fully supported and up to date.\n\n${table}`
       )
     );
   }
