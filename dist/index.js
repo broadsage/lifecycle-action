@@ -55892,6 +55892,7 @@ class GitHubIntegration {
      */
     async upsertDashboardIssue(results, title) {
         const { owner, repo } = this.context.repo;
+        const body = (0, outputs_1.formatAsDashboard)(results);
         const dashboardLabel = 'lifecycle-dashboard';
         const allLabels = [dashboardLabel];
         // Ensure the dashboard label exists with a professional description
@@ -55907,12 +55908,8 @@ class GitHubIntegration {
                 per_page: 5,
             });
             const existingDashboard = issues.data[0];
-            let completedTasks = [];
             if (existingDashboard) {
                 core.info(`Updating existing dashboard issue #${existingDashboard.number}`);
-                // Parse existing body to preserve checkbox states
-                completedTasks = this.parseCompletedTasks(existingDashboard.body || '');
-                const body = (0, outputs_1.formatAsDashboard)(results, completedTasks);
                 await this.octokit.rest.issues.update({
                     owner,
                     repo,
@@ -55924,7 +55921,6 @@ class GitHubIntegration {
             }
             // Create new dashboard issue
             core.info('Creating new dashboard issue');
-            const body = (0, outputs_1.formatAsDashboard)(results, []);
             const newIssue = await this.octokit.rest.issues.create({
                 owner,
                 repo,
@@ -55939,22 +55935,6 @@ class GitHubIntegration {
             core.error(`Failed to upsert dashboard: ${(0, error_utils_1.getErrorMessage)(error)}`);
             return null;
         }
-    }
-    /**
-     * Parse the issue body to find which items have been checked off
-     */
-    parseCompletedTasks(body) {
-        const completed = [];
-        // Match lines like "- [x] ❌ **Upgrade product version**" or "- [x] ⏰ **Review product version**"
-        // Capture the "product version" part
-        const regex = /- \[x\] [^ ]+ \*\*[^*]+\*\* ([^* ]+ [^* ]+)/g;
-        let match;
-        while ((match = regex.exec(body)) !== null) {
-            if (match[1]) {
-                completed.push(match[1].trim());
-            }
-        }
-        return completed;
     }
     /**
      * Ensure a label exists in the repository
@@ -56241,31 +56221,31 @@ async function run() {
         if (inputs.outputFile && formattedOutput) {
             await (0, outputs_1.writeToFile)(inputs.outputFile, formattedOutput);
         }
-        // Handle GitHub Issue integration (Dashboard or Single Issue)
-        if (inputs.githubToken) {
+        // Create GitHub issue if requested
+        if (inputs.createIssueOnEol && inputs.githubToken && results.eolDetected) {
+            core.info('Creating GitHub issue for EOL detection...');
             const ghIntegration = new github_1.GitHubIntegration(inputs.githubToken);
-            if (inputs.useDashboard) {
-                core.info('Upserting Software Lifecycle Dashboard...');
-                const dashboardNumber = await ghIntegration.upsertDashboardIssue(results, inputs.dashboardTitle);
-                if (dashboardNumber) {
-                    core.info(`Dashboard updated: #${dashboardNumber}`);
-                    core.setOutput('dashboard-issue-number', dashboardNumber);
-                }
+            const labels = inputs.issueLabels
+                .split(',')
+                .map((l) => l.trim())
+                .filter((l) => l.length > 0);
+            const issueNumber = await ghIntegration.createEolIssue(results, labels);
+            if (issueNumber) {
+                core.info(`Issue created/updated: #${issueNumber}`);
+                core.setOutput('issue-number', issueNumber);
             }
-            else if (inputs.createIssueOnEol && results.eolDetected) {
-                core.info('Creating GitHub issue for EOL detection...');
-                const labels = inputs.issueLabels
-                    .split(',')
-                    .map((l) => l.trim())
-                    .filter((l) => l.length > 0);
-                const issueNumber = await ghIntegration.createEolIssue(results, labels);
-                if (issueNumber) {
-                    core.info(`Issue created/updated: #${issueNumber}`);
-                    core.setOutput('issue-number', issueNumber);
-                }
-                else {
-                    core.warning('Failed to create or update issue');
-                }
+            else {
+                core.warning('Failed to create or update issue');
+            }
+        }
+        // Handle dashboard creation/update
+        if (inputs.useDashboard && inputs.githubToken) {
+            core.info('Upserting Software Lifecycle Dashboard...');
+            const ghIntegration = new github_1.GitHubIntegration(inputs.githubToken);
+            const dashboardNumber = await ghIntegration.upsertDashboardIssue(results, inputs.dashboardTitle);
+            if (dashboardNumber) {
+                core.info(`Dashboard updated: #${dashboardNumber}`);
+                core.setOutput('dashboard-issue-number', dashboardNumber);
             }
         }
         // Send notifications to configured channels
@@ -57863,15 +57843,6 @@ class MarkdownHelper {
         }
     }
     /**
-     * Format a task list item for review
-     */
-    static formatTaskItem(p, type, isCompleted = false) {
-        const icon = type === 'eol' ? '❌' : '⏰';
-        const label = type === 'eol' ? 'Upgrade' : 'Review';
-        const checkbox = isCompleted ? '[x]' : '[ ]';
-        return `- ${checkbox} ${icon} **${label} ${p.product} ${p.release}** (EOL: ${p.eolDate || 'N/A'})`;
-    }
-    /**
      * Create a Markdown table
      */
     static createTable(headers, rows) {
@@ -58127,51 +58098,22 @@ function createIssueBody(results) {
 /**
  * Create a modern lifecycle dashboard body
  */
-function formatAsDashboard(results, completedTasks = []) {
+function formatAsDashboard(results) {
     const lines = [
         '# 🛡️ Software Lifecycle Dashboard\n',
-        'This dashboard provides a live overview of the support status for your software dependencies. High-risk items require manual review and confirmation.\n',
+        'This dashboard provides a live overview of the support status for your software dependencies. It is automatically updated.\n',
     ];
     const eolCount = results.eolProducts.length;
     const approachingCount = results.approachingEolProducts.length;
-    const staleCount = results.staleProducts.length;
     const healthyCount = results.products.filter((p) => p.status === types_1.EolStatus.ACTIVE).length;
-    // 1. Status Overview (Visual)
     lines.push('### 📊 Status Overview');
-    lines.push(`> 🔴 **${eolCount}** Critical | 🟠 **${approachingCount}** Warning | ⏰ **${staleCount}** Stale | 🟢 **${healthyCount}** Healthy\n`);
-    // 2. Review & Management (Actionable Task List)
-    if (eolCount > 0 || staleCount > 0) {
-        lines.push('## 📝 Action Items (Review & Confirm)');
-        lines.push('Review the following critical items and check them off once migration or risk assessment is complete.');
-        if (eolCount > 0) {
-            lines.push('\n### 🚨 Critical Upgrades');
-            results.eolProducts.forEach((p) => {
-                const taskKey = `${p.product} ${p.release}`;
-                const isCompleted = completedTasks.includes(taskKey);
-                lines.push(MarkdownHelper.formatTaskItem(p, 'eol', isCompleted));
-            });
-        }
-        if (staleCount > 0) {
-            lines.push('\n### ⏰ Maintenance Required');
-            results.staleProducts.forEach((p) => {
-                const taskKey = `${p.product} ${p.release}`;
-                const isCompleted = completedTasks.includes(taskKey);
-                lines.push(MarkdownHelper.formatTaskItem(p, 'stale', isCompleted));
-            });
-        }
-        lines.push('\n---\n');
-    }
-    else {
-        lines.push('## ✅ No Action Required');
-        lines.push('All dependencies are currently healthy and up-to-date.\n\n---\n');
-    }
-    // 3. Detailed Inventory Sections
+    lines.push(`> 🔴 **${eolCount}** End-of-Life | 🟠 **${approachingCount}** Warning | 🟢 **${healthyCount}** Healthy\n`);
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
     const recentEol = results.eolProducts.filter((p) => p.eolDate && new Date(p.eolDate) >= ninetyDaysAgo);
     const legacyEol = results.eolProducts.filter((p) => !p.eolDate || new Date(p.eolDate) < ninetyDaysAgo);
     if (recentEol.length > 0) {
-        lines.push(MarkdownHelper.createSection('🔴 Recently End-of-Life', 'Versions that became unsupported within the last 90 days.'));
+        lines.push(MarkdownHelper.createSection('🔴 Critical: Recent End-of-Life', 'Immediate action recommended (EOL within last 90 days).'));
         lines.push(MarkdownHelper.createTable(['Product', 'Version', 'EOL Date', 'LTS', 'Recommended'], recentEol.map((p) => MarkdownHelper.formatProductRow(p, 'dashboard'))));
     }
     if (results.approachingEolProducts.length > 0) {
@@ -58179,23 +58121,20 @@ function formatAsDashboard(results, completedTasks = []) {
         lines.push(MarkdownHelper.createTable(['Product', 'Version', 'EOL Date', 'LTS', 'Days Left'], results.approachingEolProducts.map((p) => `| **${p.product}** | \`${p.release}\` | ${p.eolDate} | ${p.isLts ? '✓' : '✗'} | \`${p.daysUntilEol}\` days |`)));
     }
     if (legacyEol.length > 0) {
-        lines.push('## 💾 Legacy Support');
+        lines.push('## 💾 Legacy End-of-Life');
         lines.push(MarkdownHelper.createDetails('Click to view products EOL for > 90 days', MarkdownHelper.createTable(['Product', 'Version', 'EOL Date', 'LTS', 'Latest'], legacyEol.map((p) => `| ${p.product} | \`${p.release}\` | ${p.eolDate || 'N/A'} | ${p.isLts ? '✓' : '✗'} | \`${p.latestVersion || 'N/A'}\` |`))));
+    }
+    if (results.staleProducts.length > 0) {
+        lines.push('## ⏰ Maintenance Required');
+        lines.push(MarkdownHelper.createDetails('Click to view products with no updates for a long time', MarkdownHelper.createTable(['Product', 'Version', 'Last Update', 'Status'], results.staleProducts.map((p) => MarkdownHelper.formatProductRow(p, 'stale')))));
     }
     const activeProducts = results.products.filter((p) => p.status === types_1.EolStatus.ACTIVE);
     if (activeProducts.length > 0) {
         lines.push('## 🟢 Healthy & Supported');
         lines.push(MarkdownHelper.createTable(['Product', 'Version', 'EOL Date', 'LTS', 'Latest'], activeProducts.map((p) => `| ${p.product} | \`${p.release}\` | ${p.eolDate || 'N/A'} | ${p.isLts ? '✓' : '✗'} | \`${p.latestVersion || 'N/A'}\` |`)));
     }
-    // 4. Configuration Metadata (Renovate Style)
-    lines.push('\n---\n');
-    lines.push('### ⚙️ Configuration');
-    lines.push(`- **Scan Date:** ${new Date().toUTCString()}\n` +
-        `- **Products Tracked:** ${results.totalProductsChecked}\n` +
-        `- **Scan Trigger:** \`${process.env.GITHUB_EVENT_NAME || 'manual'}\`\n` +
-        `- **Report Link:** [View Run](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})`);
-    lines.push('\n' +
-        `*Generated by [Software Lifecycle Tracker](https://github.com/broadsage/lifecycle-action)*`);
+    lines.push('---\n' +
+        `*Last updated: ${new Date().toUTCString()} | [Report Link](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})*`);
     return lines.join('\n');
 }
 

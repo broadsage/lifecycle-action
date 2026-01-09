@@ -136,6 +136,7 @@ export class GitHubIntegration {
     title: string
   ): Promise<number | null> {
     const { owner, repo } = this.context.repo;
+    const body = formatAsDashboard(results);
     const dashboardLabel = 'lifecycle-dashboard';
     const allLabels = [dashboardLabel];
 
@@ -157,18 +158,11 @@ export class GitHubIntegration {
       });
 
       const existingDashboard = issues.data[0];
-      let completedTasks: string[] = [];
 
       if (existingDashboard) {
         core.info(
           `Updating existing dashboard issue #${existingDashboard.number}`
         );
-
-        // Parse existing body to preserve checkbox states
-        completedTasks = this.parseCompletedTasks(existingDashboard.body || '');
-
-        const body = formatAsDashboard(results, completedTasks);
-
         await this.octokit.rest.issues.update({
           owner,
           repo,
@@ -181,7 +175,6 @@ export class GitHubIntegration {
 
       // Create new dashboard issue
       core.info('Creating new dashboard issue');
-      const body = formatAsDashboard(results, []);
       const newIssue = await this.octokit.rest.issues.create({
         owner,
         repo,
@@ -196,25 +189,6 @@ export class GitHubIntegration {
       core.error(`Failed to upsert dashboard: ${getErrorMessage(error)}`);
       return null;
     }
-  }
-
-  /**
-   * Parse the issue body to find which items have been checked off
-   */
-  private parseCompletedTasks(body: string): string[] {
-    const completed: string[] = [];
-    // Match lines like "- [x] ❌ **Upgrade product version**" or "- [x] ⏰ **Review product version**"
-    // Capture the "product version" part
-    const regex = /- \[x\] [^ ]+ \*\*[^*]+\*\* ([^* ]+ [^* ]+)/g;
-    let match;
-
-    while ((match = regex.exec(body)) !== null) {
-      if (match[1]) {
-        completed.push(match[1].trim());
-      }
-    }
-
-    return completed;
   }
 
   /**

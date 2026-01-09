@@ -30,20 +30,6 @@ class MarkdownHelper {
   }
 
   /**
-   * Format a task list item for review
-   */
-  static formatTaskItem(
-    p: ProductVersionInfo,
-    type: 'eol' | 'stale',
-    isCompleted = false
-  ): string {
-    const icon = type === 'eol' ? '❌' : '⏰';
-    const label = type === 'eol' ? 'Upgrade' : 'Review';
-    const checkbox = isCompleted ? '[x]' : '[ ]';
-    return `- ${checkbox} ${icon} **${label} ${p.product} ${p.release}** (EOL: ${p.eolDate || 'N/A'})`;
-  }
-
-  /**
    * Create a Markdown table
    */
   static createTable(headers: string[], rows: string[]): string {
@@ -421,61 +407,23 @@ export function createIssueBody(results: ActionResults): string {
 /**
  * Create a modern lifecycle dashboard body
  */
-export function formatAsDashboard(
-  results: ActionResults,
-  completedTasks: string[] = []
-): string {
+export function formatAsDashboard(results: ActionResults): string {
   const lines: string[] = [
     '# 🛡️ Software Lifecycle Dashboard\n',
-    'This dashboard provides a live overview of the support status for your software dependencies. High-risk items require manual review and confirmation.\n',
+    'This dashboard provides a live overview of the support status for your software dependencies. It is automatically updated.\n',
   ];
 
   const eolCount = results.eolProducts.length;
   const approachingCount = results.approachingEolProducts.length;
-  const staleCount = results.staleProducts.length;
   const healthyCount = results.products.filter(
     (p) => p.status === EolStatus.ACTIVE
   ).length;
 
-  // 1. Status Overview (Visual)
   lines.push('### 📊 Status Overview');
   lines.push(
-    `> 🔴 **${eolCount}** Critical | 🟠 **${approachingCount}** Warning | ⏰ **${staleCount}** Stale | 🟢 **${healthyCount}** Healthy\n`
+    `> 🔴 **${eolCount}** End-of-Life | 🟠 **${approachingCount}** Warning | 🟢 **${healthyCount}** Healthy\n`
   );
 
-  // 2. Review & Management (Actionable Task List)
-  if (eolCount > 0 || staleCount > 0) {
-    lines.push('## 📝 Action Items (Review & Confirm)');
-    lines.push(
-      'Review the following critical items and check them off once migration or risk assessment is complete.'
-    );
-
-    if (eolCount > 0) {
-      lines.push('\n### 🚨 Critical Upgrades');
-      results.eolProducts.forEach((p) => {
-        const taskKey = `${p.product} ${p.release}`;
-        const isCompleted = completedTasks.includes(taskKey);
-        lines.push(MarkdownHelper.formatTaskItem(p, 'eol', isCompleted));
-      });
-    }
-
-    if (staleCount > 0) {
-      lines.push('\n### ⏰ Maintenance Required');
-      results.staleProducts.forEach((p) => {
-        const taskKey = `${p.product} ${p.release}`;
-        const isCompleted = completedTasks.includes(taskKey);
-        lines.push(MarkdownHelper.formatTaskItem(p, 'stale', isCompleted));
-      });
-    }
-    lines.push('\n---\n');
-  } else {
-    lines.push('## ✅ No Action Required');
-    lines.push(
-      'All dependencies are currently healthy and up-to-date.\n\n---\n'
-    );
-  }
-
-  // 3. Detailed Inventory Sections
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
@@ -489,8 +437,8 @@ export function formatAsDashboard(
   if (recentEol.length > 0) {
     lines.push(
       MarkdownHelper.createSection(
-        '🔴 Recently End-of-Life',
-        'Versions that became unsupported within the last 90 days.'
+        '🔴 Critical: Recent End-of-Life',
+        'Immediate action recommended (EOL within last 90 days).'
       )
     );
     lines.push(
@@ -520,7 +468,7 @@ export function formatAsDashboard(
   }
 
   if (legacyEol.length > 0) {
-    lines.push('## 💾 Legacy Support');
+    lines.push('## 💾 Legacy End-of-Life');
     lines.push(
       MarkdownHelper.createDetails(
         'Click to view products EOL for > 90 days',
@@ -529,6 +477,21 @@ export function formatAsDashboard(
           legacyEol.map(
             (p) =>
               `| ${p.product} | \`${p.release}\` | ${p.eolDate || 'N/A'} | ${p.isLts ? '✓' : '✗'} | \`${p.latestVersion || 'N/A'}\` |`
+          )
+        )
+      )
+    );
+  }
+
+  if (results.staleProducts.length > 0) {
+    lines.push('## ⏰ Maintenance Required');
+    lines.push(
+      MarkdownHelper.createDetails(
+        'Click to view products with no updates for a long time',
+        MarkdownHelper.createTable(
+          ['Product', 'Version', 'Last Update', 'Status'],
+          results.staleProducts.map((p) =>
+            MarkdownHelper.formatProductRow(p, 'stale')
           )
         )
       )
@@ -551,19 +514,9 @@ export function formatAsDashboard(
     );
   }
 
-  // 4. Configuration Metadata (Renovate Style)
-  lines.push('\n---\n');
-  lines.push('### ⚙️ Configuration');
   lines.push(
-    `- **Scan Date:** ${new Date().toUTCString()}\n` +
-      `- **Products Tracked:** ${results.totalProductsChecked}\n` +
-      `- **Scan Trigger:** \`${process.env.GITHUB_EVENT_NAME || 'manual'}\`\n` +
-      `- **Report Link:** [View Run](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})`
-  );
-
-  lines.push(
-    '\n' +
-      `*Generated by [Software Lifecycle Tracker](https://github.com/broadsage/lifecycle-action)*`
+    '---\n' +
+      `*Last updated: ${new Date().toUTCString()} | [Report Link](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})*`
   );
 
   return lines.join('\n');

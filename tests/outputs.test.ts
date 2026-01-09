@@ -214,9 +214,9 @@ describe('Output Formatting', () => {
         it('should format results as a modern dashboard with legacy EOL', () => {
             const result = formatAsDashboard(mockResults);
 
-            expect(result).toContain('> 🔴 **1** Critical | 🟠 **0** Warning | ⏰ **0** Stale | 🟢 **0** Healthy');
-            expect(result).toContain('- [ ] ❌ **Upgrade python 2.7**');
-            expect(result).toContain('## 💾 Legacy Support');
+            expect(result).toContain('> 🔴 **1** End-of-Life | 🟠 **0** Warning | 🟢 **0** Healthy');
+            expect(result).toContain('| Product | Version | EOL Date | LTS | Latest |');
+            expect(result).toContain('## 💾 Legacy End-of-Life');
             expect(result).toContain('| python | `2.7` | 2020-01-01 | ✗ | `2.7.18` |');
         });
 
@@ -233,7 +233,7 @@ describe('Output Formatting', () => {
             };
 
             const result = formatAsDashboard(results);
-            expect(result).toContain('🔴 Recently End-of-Life');
+            expect(result).toContain('## 🔴 Critical: Recent End-of-Life');
             expect(result).toContain('| **python** | `2.7` | 2025-12-01 | ✗ | Update to `2.7.18` |');
         });
 
@@ -280,14 +280,13 @@ describe('Output Formatting', () => {
             };
             const results: ActionResults = {
                 ...mockResults,
-                eolProducts: [],
                 staleProducts: [staleProduct],
             };
 
             const result = formatAsDashboard(results);
             expect(result).toContain('## ⏰ Maintenance Required');
-            expect(result).toContain('- [ ] ⏰ **Review python 3.6**');
-            expect(result).toContain('### ⚙️ Configuration');
+            expect(result).toContain('<details><summary>Click to view products with no updates for a long time</summary>');
+            expect(result).toContain('| **python** | `3.6` | 2018-12-24 | `1800` days stale |');
         });
     });
 

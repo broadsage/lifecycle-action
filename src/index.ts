@@ -261,35 +261,37 @@ export async function run(): Promise<void> {
       await writeToFile(inputs.outputFile, formattedOutput);
     }
 
-    // Handle GitHub Issue integration (Dashboard or Single Issue)
-    if (inputs.githubToken) {
+    // Create GitHub issue if requested
+    if (inputs.createIssueOnEol && inputs.githubToken && results.eolDetected) {
+      core.info('Creating GitHub issue for EOL detection...');
+      const ghIntegration = new GitHubIntegration(inputs.githubToken);
+      const labels = inputs.issueLabels
+        .split(',')
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
+
+      const issueNumber = await ghIntegration.createEolIssue(results, labels);
+      if (issueNumber) {
+        core.info(`Issue created/updated: #${issueNumber}`);
+        core.setOutput('issue-number', issueNumber);
+      } else {
+        core.warning('Failed to create or update issue');
+      }
+    }
+
+    // Handle dashboard creation/update
+    if (inputs.useDashboard && inputs.githubToken) {
+      core.info('Upserting Software Lifecycle Dashboard...');
       const ghIntegration = new GitHubIntegration(inputs.githubToken);
 
-      if (inputs.useDashboard) {
-        core.info('Upserting Software Lifecycle Dashboard...');
-        const dashboardNumber = await ghIntegration.upsertDashboardIssue(
-          results,
-          inputs.dashboardTitle
-        );
+      const dashboardNumber = await ghIntegration.upsertDashboardIssue(
+        results,
+        inputs.dashboardTitle
+      );
 
-        if (dashboardNumber) {
-          core.info(`Dashboard updated: #${dashboardNumber}`);
-          core.setOutput('dashboard-issue-number', dashboardNumber);
-        }
-      } else if (inputs.createIssueOnEol && results.eolDetected) {
-        core.info('Creating GitHub issue for EOL detection...');
-        const labels = inputs.issueLabels
-          .split(',')
-          .map((l) => l.trim())
-          .filter((l) => l.length > 0);
-
-        const issueNumber = await ghIntegration.createEolIssue(results, labels);
-        if (issueNumber) {
-          core.info(`Issue created/updated: #${issueNumber}`);
-          core.setOutput('issue-number', issueNumber);
-        } else {
-          core.warning('Failed to create or update issue');
-        }
+      if (dashboardNumber) {
+        core.info(`Dashboard updated: #${dashboardNumber}`);
+        core.setOutput('dashboard-issue-number', dashboardNumber);
       }
     }
 
