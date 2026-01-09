@@ -1,5 +1,22 @@
 # Changelog
 
+## [4.4.0](https://github.com/broadsage/lifecycle-action/compare/v4.3.0...v4.4.0) (2026-01-09)
+
+
+### Features
+
+* add stale count to dashboard ([794e124](https://github.com/broadsage/lifecycle-action/commit/794e1249ef29cec824da52e2c0ddf9a5c710e9f3))
+* add stale count to dashboard ([794e124](https://github.com/broadsage/lifecycle-action/commit/794e1249ef29cec824da52e2c0ddf9a5c710e9f3))
+* add stale products count to dashboard status overview ([9057f10](https://github.com/broadsage/lifecycle-action/commit/9057f105deaa5e7ebc873e0bf49a4b13be51b167))
+
+
+### Miscellaneous
+
+* dashboard improvements ([1f1edce](https://github.com/broadsage/lifecycle-action/commit/1f1edce6a5f09e646d88de15a7f2a6c17faf7d50))
+* dashboard improvements ([1f1edce](https://github.com/broadsage/lifecycle-action/commit/1f1edce6a5f09e646d88de15a7f2a6c17faf7d50))
+* dashboard improvements with action items ([23e1c7d](https://github.com/broadsage/lifecycle-action/commit/23e1c7dcc8b4798b2abbf06e01034edd8a0a5ef4))
+* revert dashboard action items change ([c3532ca](https://github.com/broadsage/lifecycle-action/commit/c3532ca34eb72148cf86628a358d224b4ca4ad67))
+
 ## [4.3.0](https://github.com/broadsage/lifecycle-action/compare/v4.2.0...v4.3.0) (2026-01-08)
 
 
