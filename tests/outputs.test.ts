@@ -214,7 +214,7 @@ describe('Output Formatting', () => {
         it('should format results as a modern dashboard with legacy EOL', () => {
             const result = formatAsDashboard(mockResults);
 
-            expect(result).toContain('> 🔴 **1** End-of-Life | 🟠 **0** Warning | 🟢 **0** Healthy');
+            expect(result).toContain('> 🔴 **1** End-of-Life | 🟠 **0** Warning | ⏰ **0** Stale | 🟢 **0** Healthy');
             expect(result).toContain('| Product | Version | EOL Date | LTS | Latest |');
             expect(result).toContain('## 💾 Legacy End-of-Life');
             expect(result).toContain('| python | `2.7` | 2020-01-01 | ✗ | `2.7.18` |');

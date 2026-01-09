@@ -415,13 +415,14 @@ export function formatAsDashboard(results: ActionResults): string {
 
   const eolCount = results.eolProducts.length;
   const approachingCount = results.approachingEolProducts.length;
+  const staleCount = results.staleProducts.length;
   const healthyCount = results.products.filter(
     (p) => p.status === EolStatus.ACTIVE
   ).length;
 
   lines.push('### 📊 Status Overview');
   lines.push(
-    `> 🔴 **${eolCount}** End-of-Life | 🟠 **${approachingCount}** Warning | 🟢 **${healthyCount}** Healthy\n`
+    `> 🔴 **${eolCount}** End-of-Life | 🟠 **${approachingCount}** Warning | ⏰ **${staleCount}** Stale | 🟢 **${healthyCount}** Healthy\n`
   );
 
   const ninetyDaysAgo = new Date();

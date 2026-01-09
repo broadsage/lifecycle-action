@@ -58105,9 +58105,10 @@ function formatAsDashboard(results) {
     ];
     const eolCount = results.eolProducts.length;
     const approachingCount = results.approachingEolProducts.length;
+    const staleCount = results.staleProducts.length;
     const healthyCount = results.products.filter((p) => p.status === types_1.EolStatus.ACTIVE).length;
     lines.push('### 📊 Status Overview');
-    lines.push(`> 🔴 **${eolCount}** End-of-Life | 🟠 **${approachingCount}** Warning | 🟢 **${healthyCount}** Healthy\n`);
+    lines.push(`> 🔴 **${eolCount}** End-of-Life | 🟠 **${approachingCount}** Warning | ⏰ **${staleCount}** Stale | 🟢 **${healthyCount}** Healthy\n`);
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
     const recentEol = results.eolProducts.filter((p) => p.eolDate && new Date(p.eolDate) >= ninetyDaysAgo);
