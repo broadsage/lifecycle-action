@@ -1,5 +1,52 @@
 # Changelog
 
+## [4.3.0](https://github.com/broadsage/lifecycle-action/compare/v4.2.0...v4.3.0) (2026-01-08)
+
+
+### Features
+
+* add self-tracking lifecycle check workflow ([0014873](https://github.com/broadsage/lifecycle-action/commit/001487341fc89ff3d9cbfc9eeec46343a3b6a4cc))
+* add self-tracking lifecycle check workflow ([0014873](https://github.com/broadsage/lifecycle-action/commit/001487341fc89ff3d9cbfc9eeec46343a3b6a4cc))
+* add self-tracking lifecycle check workflow ([0562ccf](https://github.com/broadsage/lifecycle-action/commit/0562ccf8f13f67fc9d6396e76032bc448f391a1e))
+* automatically create lifecycle-dashboard label and simplify dashboard issue tracking ([dc64242](https://github.com/broadsage/lifecycle-action/commit/dc6424205dc557f9fcd3b0ada5c456fb314c2127))
+* codeowners added for openssf compliance ([cf95084](https://github.com/broadsage/lifecycle-action/commit/cf95084a35003bb230c7c6594f5c241baacfb7e8))
+* implement Lifecycle Dashboard for proactive dependency management ([3b34147](https://github.com/broadsage/lifecycle-action/commit/3b34147b865c687a99198d22b45d4531cb437e37))
+* openssf badge added to readmefile ([542b776](https://github.com/broadsage/lifecycle-action/commit/542b776a5dc2952b0beab9595561a48a5466c7bb))
+* optimize dashboard by splitting EOL products into Recent and Legacy sections ([29cbb46](https://github.com/broadsage/lifecycle-action/commit/29cbb46d3f92b0fb8112fd0707f0dbfe00342ccd))
+
+
+### Bug Fixes
+
+* **security:** add explicit top-level read permissions to ci workflow ([0c6d1c3](https://github.com/broadsage/lifecycle-action/commit/0c6d1c344542a1848984050a758d9467d6f5cc8a))
+* **security:** resolve top-level token permission alert [#11](https://github.com/broadsage/lifecycle-action/issues/11) ([6668a85](https://github.com/broadsage/lifecycle-action/commit/6668a85100cea8a79f93b803dbff6fb25290c0eb))
+
+
+### Code Refactoring
+
+* consolidate  output formatting, remove legacy code ([3d2c0a5](https://github.com/broadsage/lifecycle-action/commit/3d2c0a589e14282ac4c1d6597aec3381e0f6bb46))
+* consolidate  output formatting, remove legacy code ([3d2c0a5](https://github.com/broadsage/lifecycle-action/commit/3d2c0a589e14282ac4c1d6597aec3381e0f6bb46))
+* consolidate output formatting, remove legacy code, and improve maintenance tracking ([5129085](https://github.com/broadsage/lifecycle-action/commit/51290852d67d71181ebfb1b5d441bf4e702a8793))
+
+
+### Documentation
+
+* finalize Phase 6 documentation and add dashboard outputs ([9d39a13](https://github.com/broadsage/lifecycle-action/commit/9d39a13b9f5c3945daf30ec99d5b624639c3323e))
+* improve README layout and fix empty table headers ([d0aacf1](https://github.com/broadsage/lifecycle-action/commit/d0aacf18bf4530162d3c1068212413c6d3bc7c09))
+
+
+### Miscellaneous
+
+* optimize workflow triggers for build minute efficiency ([895d63d](https://github.com/broadsage/lifecycle-action/commit/895d63d7d4f80338403b531ff402f8abad053f0f))
+* **security:** improve OpenSSF Scorecard compliance with fuzzing ([0a44b53](https://github.com/broadsage/lifecycle-action/commit/0a44b53a5ba65dff4b7c6525956781e6051a63b2))
+* **security:** improve OpenSSF Scorecard compliance with fuzzing ([0a44b53](https://github.com/broadsage/lifecycle-action/commit/0a44b53a5ba65dff4b7c6525956781e6051a63b2))
+* **security:** improve OpenSSF Scorecard compliance with fuzzing and badges ([457e75b](https://github.com/broadsage/lifecycle-action/commit/457e75b55df22c752a7020f2638f9f241e5e6e6c))
+* updated lifecycle example file ([df1f3e7](https://github.com/broadsage/lifecycle-action/commit/df1f3e728a8be05889735570d8deee36836be211))
+
+
+### Tests
+
+* update dashboard formatting tests for Recent/Legacy EOL ([f8dd50b](https://github.com/broadsage/lifecycle-action/commit/f8dd50b1b963a5750105da335cd85a4f2489b9b6))
+
 ## [4.2.0](https://github.com/broadsage/lifecycle-action/compare/v4.1.1...v4.2.0) (2026-01-07)
 
 
