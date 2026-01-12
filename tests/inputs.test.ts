@@ -31,7 +31,7 @@ describe('Input Parsing and Validation', () => {
                     'output-file': '',
                     'cache-ttl': '3600',
                     'github-token': '',
-                    'issue-labels': 'dependencies,eol,security',
+
                     'custom-api-url': 'https://endoflife.date/api/v1',
                     'file-path': '',
                     'file-key': '',
@@ -55,7 +55,7 @@ describe('Input Parsing and Validation', () => {
                     'fail-on-approaching-eol': false,
                     'fail-on-stale': false,
                     'include-discontinued': true,
-                    'create-issue-on-eol': false,
+
                     'include-latest-version': true,
                     'include-support-info': true,
                     'semantic-version-fallback': true,
@@ -216,8 +216,7 @@ describe('Input Parsing and Validation', () => {
             outputFile: '',
             cacheTtl: 3600,
             githubToken: '',
-            createIssueOnEol: false,
-            issueLabels: 'dependencies,eol',
+
             includeLatestVersion: true,
             includeSupportInfo: true,
             customApiUrl: 'https://endoflife.date',
@@ -290,17 +289,7 @@ describe('Input Parsing and Validation', () => {
             );
         });
 
-        it('should throw error when creating issue without token', () => {
-            const inputs = {
-                ...validInputs,
-                createIssueOnEol: true,
-                githubToken: '',
-            };
 
-            expect(() => validateInputs(inputs)).toThrow(
-                'GitHub token is required when create-issue-on-eol is enabled'
-            );
-        });
 
         it('should validate releases JSON format', () => {
             const inputs = { ...validInputs, releases: '{invalid}' };

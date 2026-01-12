@@ -17,7 +17,7 @@ Never miss an End-of-Life date again. Automatically track **380+ software produc
 | :--- | :--- |
 | 🔍 **Track 380+ Products** | Native support for Python, Node.js, Ubuntu, PostgreSQL, Kubernetes, and many more via [endoflife.date](https://endoflife.date). |
 | 📢 **Smart Notifications** | Instant alerts via **Slack, Discord, Teams, Google Chat**, or custom webhooks. |
-| 🤖 **Autonomous Security** | Schedule regular checks and **auto-create GitHub Issues** when EOL is detected. |
+| 🤖 **Autonomous Security** | Schedule regular checks to keep your dependencies secure and up-to-date. |
 | 📊 **Dynamic Matrices** | Automatically build version matrices for multi-version CI/CD testing strategies. |
 | 🎯 **Universal Extraction** | Extract versions directly from `package.json`, `Dockerfile`, `Helm charts`, or custom regex. |
 | ⚡ **Enterprise Ready** | Feature-rich with **built-in caching**, SSRF protection, and 85%+ test coverage. |
@@ -48,8 +48,6 @@ Keep your team informed across multiple platforms.
   with:
     products: 'python,nodejs'
     slack-webhook-url: ${{ secrets.SLACK_WEBHOOK }}
-    create-issue-on-eol: true
-    github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ### 3. Automated Test Matrix
@@ -116,7 +114,7 @@ jobs:
 | :--- | :--- |
 | **Version Extraction** | Extract from files (`yaml`, `json`, `text`) using `file-path` and `file-key`. |
 | **SBOM Support** | Parse CycloneDX or SPDX files to identify all components. |
-| **GitHub Issues** | Auto-generate issues with labels like `security`, `eol`. |
+| **GitHub Issues** | Maintain a persistent Lifecycle Dashboard for all tracked products. |
 
 </details>
 

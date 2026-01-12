@@ -6,7 +6,7 @@ import * as fs from 'fs/promises';
 import {
     formatAsJson,
     formatAsMarkdown,
-    createIssueBody,
+
     generateMatrix,
     generateMatrixInclude,
     setOutputs,
@@ -290,108 +290,7 @@ describe('Output Formatting', () => {
         });
     });
 
-    describe('createIssueBody', () => {
-        it('should create issue body with EOL information', () => {
-            const result = createIssueBody(mockResults);
 
-            expect(result).toContain('# 🚨 End-of-Life Software Detected');
-            expect(result).toContain('## ❌ End-of-Life Versions');
-            expect(result).toContain('### python 2.7');
-            expect(result).toContain('**EOL Date:** 2020-01-01');
-        });
-
-        it('should include approaching EOL section', () => {
-            const approachingProduct: ProductVersionInfo = {
-                ...mockProduct,
-                status: EolStatus.APPROACHING_EOL,
-                release: '3.9',
-                daysUntilEol: 45,
-                eolDate: '2025-02-15',
-            };
-
-            const results: ActionResults = {
-                ...mockResults,
-                approachingEol: true,
-                approachingEolProducts: [approachingProduct],
-            };
-
-            const result = createIssueBody(results);
-
-            expect(result).toContain('## ⚠️ Approaching End-of-Life');
-            expect(result).toContain('**Days Until EOL:** 45');
-        });
-
-        it('should include recommended actions', () => {
-            const result = createIssueBody(mockResults);
-
-            expect(result).toContain('## 📋 Recommended Actions');
-            expect(result).toContain('Review the affected software versions');
-            expect(result).toContain('Plan migration to supported versions');
-        });
-
-        it('should include links when available', () => {
-            const result = createIssueBody(mockResults);
-
-            expect(result).toContain('**More Info:**');
-            expect(result).toContain('https://www.python.org/downloads/release/python-2718/');
-        });
-
-        it('should handle products without links', () => {
-            const productWithoutLink: ProductVersionInfo = {
-                ...mockProduct,
-                link: null,
-            };
-
-            const results: ActionResults = {
-                ...mockResults,
-                eolProducts: [productWithoutLink],
-            };
-
-            const result = createIssueBody(results);
-
-            expect(result).not.toContain('**More Info:**');
-        });
-
-        it('should include stale versions information', () => {
-            const staleProduct: ProductVersionInfo = {
-                ...mockProduct,
-                release: '3.6',
-                latestReleaseDate: '2018-12-24',
-                daysSinceLatestRelease: 1800,
-            };
-
-            const results: ActionResults = {
-                ...mockResults,
-                staleProducts: [staleProduct],
-            };
-
-            const result = createIssueBody(results);
-
-            expect(result).toContain('## ⏰ Stale Versions');
-            expect(result).toContain('### python 3.6');
-            expect(result).toContain('**Days Since Latest Release:** 1800');
-        });
-
-        it('should include discontinued products information', () => {
-            const discontinuedProduct: ProductVersionInfo = {
-                ...mockProduct,
-                release: '10.0',
-                isDiscontinued: true,
-                discontinuedDate: '2023-01-01',
-            };
-
-            const results: ActionResults = {
-                ...mockResults,
-                discontinuedProducts: [discontinuedProduct],
-            };
-
-            const result = createIssueBody(results);
-
-            expect(result).toContain('## 🚫 Discontinued Products');
-            expect(result).toContain('### python 10.0');
-            expect(result).toContain('**Discontinued Date:** 2023-01-01');
-        });
-    });
 
     describe('generateMatrix', () => {
         it('should generate simple matrix with all products', () => {
