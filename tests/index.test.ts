@@ -48,8 +48,7 @@ describe('Main Action (index.ts)', () => {
         outputFile: '',
         cacheTtl: 3600,
         githubToken: 'test-token',
-        createIssueOnEol: false,
-        issueLabels: 'eol',
+
         useDashboard: false,
         dashboardTitle: 'Dashboard',
         includeLatestVersion: true,
@@ -157,23 +156,7 @@ describe('Main Action (index.ts)', () => {
         expect(core.setFailed).toHaveBeenCalledWith(`Action failed: ${error.message}`);
     });
 
-    it('should create issue when requested and EOL detected', async () => {
-        const resultsWithEol = { ...mockResults, eolDetected: true, eolProducts: [{ product: 'test' }] };
-        const inputsWithIssue = { ...mockInputs, createIssueOnEol: true, githubToken: 'token' };
 
-        (inputs.getInputs as jest.Mock).mockReturnValue(inputsWithIssue);
-        (EolAnalyzer.prototype.analyzeMany as jest.Mock).mockResolvedValue(resultsWithEol);
-
-        const mockGh = {
-            createEolIssue: jest.fn().mockResolvedValue(123),
-        };
-        (GitHubIntegration as jest.Mock).mockImplementation(() => mockGh);
-
-        await run();
-
-        expect(mockGh.createEolIssue).toHaveBeenCalled();
-        expect(core.info).toHaveBeenCalledWith('Issue created/updated: #123');
-    });
 
     it('should handle dashboard updates', async () => {
         const inputsWithDashboard = { ...mockInputs, useDashboard: true, githubToken: 'token' };

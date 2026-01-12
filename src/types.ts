@@ -227,8 +227,7 @@ export const ActionInputsSchema = z.object({
   outputFile: z.string(),
   cacheTtl: z.number().int().positive(),
   githubToken: z.string(),
-  createIssueOnEol: z.boolean(),
-  issueLabels: z.string(),
+
   useDashboard: z.boolean(),
   dashboardTitle: z.string(),
   includeLatestVersion: z.boolean(),

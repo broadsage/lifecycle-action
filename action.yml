@@ -70,15 +70,7 @@ inputs:
     required: false
     default: ''
   
-  create-issue-on-eol:
-    description: 'Create a GitHub issue when EOL is detected (requires github-token)'
-    required: false
-    default: 'false'
-  
-  issue-labels:
-    description: 'Comma-separated labels for created issues'
-    required: false
-    default: 'dependencies,eol,security'
+
   
   use-dashboard:
     description: 'Maintain a single persistent dashboard issue instead of multiple EOL issues'
@@ -320,8 +312,7 @@ outputs:
   extended-support-products:
     description: 'JSON array of products with extended support available'
   
-  issue-number:
-    description: 'The number of the created or updated GitHub issue (if create-issue-on-eol is enabled)'
+
   
   dashboard-issue-number:
     description: 'The number of the created or updated Lifecycle Dashboard issue (if use-dashboard is enabled)'

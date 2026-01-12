@@ -55800,50 +55800,6 @@ class GitHubIntegration {
         this.context = github.context;
     }
     /**
-     * Create an issue for EOL detection
-     */
-    async createEolIssue(results, labels) {
-        const { owner, repo } = this.context.repo;
-        const title = `🚨 End-of-Life Software Detected - ${new Date().toISOString().split('T')[0]}`;
-        const body = (0, outputs_1.createIssueBody)(results);
-        try {
-            // Check if similar issue already exists
-            const existingIssues = await this.octokit.rest.issues.listForRepo({
-                owner,
-                repo,
-                state: 'open',
-                labels: labels.join(','),
-                per_page: 10,
-            });
-            const similarIssue = existingIssues.data.find((issue) => issue.title.includes('End-of-Life Software Detected'));
-            if (similarIssue) {
-                core.info(`Similar issue already exists: #${similarIssue.number}. Adding comment instead.`);
-                await this.octokit.rest.issues.createComment({
-                    owner,
-                    repo,
-                    issue_number: similarIssue.number,
-                    body: `## Updated EOL Detection\n\n${body}`,
-                });
-                return similarIssue.number;
-            }
-            // Create new issue
-            const issue = await this.octokit.rest.issues.create({
-                owner,
-                repo,
-                title,
-                body,
-                labels,
-            });
-            core.info(`Created issue #${issue.data.number}`);
-            return issue.data.number;
-        }
-        catch (error) {
-            // Log error but don't fail the action if issue creation fails
-            core.error(`Failed to create or update GitHub issue: ${(0, error_utils_1.getErrorMessage)(error)}`);
-            return null;
-        }
-    }
-    /**
      * Add labels to an issue
      */
     async addLabels(issueNumber, labels) {
@@ -56221,23 +56177,6 @@ async function run() {
         if (inputs.outputFile && formattedOutput) {
             await (0, outputs_1.writeToFile)(inputs.outputFile, formattedOutput);
         }
-        // Create GitHub issue if requested
-        if (inputs.createIssueOnEol && inputs.githubToken && results.eolDetected) {
-            core.info('Creating GitHub issue for EOL detection...');
-            const ghIntegration = new github_1.GitHubIntegration(inputs.githubToken);
-            const labels = inputs.issueLabels
-                .split(',')
-                .map((l) => l.trim())
-                .filter((l) => l.length > 0);
-            const issueNumber = await ghIntegration.createEolIssue(results, labels);
-            if (issueNumber) {
-                core.info(`Issue created/updated: #${issueNumber}`);
-                core.setOutput('issue-number', issueNumber);
-            }
-            else {
-                core.warning('Failed to create or update issue');
-            }
-        }
         // Handle dashboard creation/update
         if (inputs.useDashboard && inputs.githubToken) {
             core.info('Upserting Software Lifecycle Dashboard...');
@@ -56373,8 +56312,6 @@ function getInputs() {
     const outputFile = core.getInput('output-file') || '';
     const cacheTtl = parseInt(core.getInput('cache-ttl') || '3600', 10);
     const githubToken = core.getInput('github-token') || '';
-    const createIssueOnEol = core.getBooleanInput('create-issue-on-eol');
-    const issueLabels = core.getInput('issue-labels') || 'dependencies,eol,security';
     const includeLatestVersion = core.getBooleanInput('include-latest-version');
     const includeSupportInfo = core.getBooleanInput('include-support-info');
     const customApiUrl = core.getInput('custom-api-url') || 'https://endoflife.date/api/v1';
@@ -56448,8 +56385,6 @@ function getInputs() {
         outputFile,
         cacheTtl,
         githubToken,
-        createIssueOnEol,
-        issueLabels,
         includeLatestVersion,
         includeSupportInfo,
         customApiUrl,
@@ -56535,9 +56470,6 @@ function validateInputs(inputs) {
     }
     if (!['json', 'markdown', 'summary'].includes(inputs.outputFormat)) {
         throw new Error('Output format must be json, markdown, or summary');
-    }
-    if (inputs.createIssueOnEol && !inputs.githubToken) {
-        throw new Error('GitHub token is required when create-issue-on-eol is enabled');
     }
     if (inputs.useDashboard && !inputs.githubToken) {
         throw new Error('GitHub token is required when use-dashboard is enabled');
@@ -57817,7 +57749,6 @@ exports.writeToFile = writeToFile;
 exports.generateMatrix = generateMatrix;
 exports.generateMatrixInclude = generateMatrixInclude;
 exports.setOutputs = setOutputs;
-exports.createIssueBody = createIssueBody;
 exports.formatAsDashboard = formatAsDashboard;
 const core = __importStar(__nccwpck_require__(37484));
 const fs = __importStar(__nccwpck_require__(91943));
@@ -58014,86 +57945,6 @@ function setOutputs(results) {
         if (value !== undefined)
             core.setOutput(key, value);
     }
-}
-/**
- * Create issue body for EOL detection
- */
-function createIssueBody(results) {
-    const lines = [
-        '# 🚨 End-of-Life Software Detected\n',
-        'This issue was automatically created by the Software Lifecycle Tracker because end-of-life software versions were detected.\n',
-    ];
-    if (results.eolProducts.length > 0) {
-        lines.push(MarkdownHelper.createSection('❌ End-of-Life Versions'));
-        lines.push(results.eolProducts
-            .map((p) => {
-            const parts = [
-                `### ${p.product} ${p.release}`,
-                `- **EOL Date:** ${p.eolDate || 'N/A'}`,
-                `- **Latest Version:** ${p.latestVersion || 'N/A'}`,
-                `- **LTS:** ${p.isLts ? 'Yes' : 'No'}`,
-            ];
-            if (p.link)
-                parts.push(`- **More Info:** ${p.link}`);
-            return parts.join('\n');
-        })
-            .join('\n\n'));
-        lines.push('');
-    }
-    if (results.approachingEolProducts.length > 0) {
-        lines.push(MarkdownHelper.createSection('⚠️ Approaching End-of-Life'));
-        lines.push(results.approachingEolProducts
-            .map((p) => {
-            const parts = [
-                `### ${p.product} ${p.release}`,
-                `- **Days Until EOL:** ${p.daysUntilEol}`,
-                `- **EOL Date:** ${p.eolDate || 'N/A'}`,
-                `- **Latest Version:** ${p.latestVersion || 'N/A'}`,
-                `- **LTS:** ${p.isLts ? 'Yes' : 'No'}`,
-            ];
-            if (p.link)
-                parts.push(`- **More Info:** ${p.link}`);
-            return parts.join('\n');
-        })
-            .join('\n\n'));
-        lines.push('');
-    }
-    if (results.staleProducts.length > 0) {
-        lines.push(MarkdownHelper.createSection('⏰ Stale Versions'));
-        lines.push(results.staleProducts
-            .map((p) => {
-            return [
-                `### ${p.product} ${p.release}`,
-                `- **Days Since Latest Release:** ${p.daysSinceLatestRelease}`,
-                `- **Last Release Date:** ${p.latestReleaseDate || 'N/A'}`,
-                `- **Latest Version:** ${p.latestVersion || 'N/A'}`,
-            ].join('\n');
-        })
-            .join('\n\n'));
-        lines.push('');
-    }
-    if (results.discontinuedProducts.length > 0) {
-        lines.push(MarkdownHelper.createSection('🚫 Discontinued Products'));
-        lines.push(results.discontinuedProducts
-            .map((p) => {
-            const parts = [
-                `### ${p.product} ${p.release}`,
-                `- **Latest Version:** ${p.latestVersion || 'N/A'}`,
-            ];
-            if (p.discontinuedDate)
-                parts.push(`- **Discontinued Date:** ${p.discontinuedDate}`);
-            return parts.join('\n');
-        })
-            .join('\n\n'));
-        lines.push('');
-    }
-    lines.push('## 📋 Recommended Actions\n');
-    lines.push('1. Review the affected software versions');
-    lines.push('2. Plan migration to supported versions');
-    lines.push('3. Update dependencies and configurations');
-    lines.push('4. Test thoroughly before deploying\n');
-    lines.push('---\n*This issue was created automatically by [Software Lifecycle Tracker](https://github.com/broadsage/lifecycle-action)*');
-    return lines.join('\n');
 }
 /**
  * Create a modern lifecycle dashboard body
@@ -58659,8 +58510,6 @@ exports.ActionInputsSchema = zod_1.z.object({
     outputFile: zod_1.z.string(),
     cacheTtl: zod_1.z.number().int().positive(),
     githubToken: zod_1.z.string(),
-    createIssueOnEol: zod_1.z.boolean(),
-    issueLabels: zod_1.z.string(),
     useDashboard: zod_1.z.boolean(),
     dashboardTitle: zod_1.z.string(),
     includeLatestVersion: zod_1.z.boolean(),

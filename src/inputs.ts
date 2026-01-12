@@ -29,9 +29,7 @@ export function getInputs(): ActionInputs {
   const outputFile = core.getInput('output-file') || '';
   const cacheTtl = parseInt(core.getInput('cache-ttl') || '3600', 10);
   const githubToken = core.getInput('github-token') || '';
-  const createIssueOnEol = core.getBooleanInput('create-issue-on-eol');
-  const issueLabels =
-    core.getInput('issue-labels') || 'dependencies,eol,security';
+
   const includeLatestVersion = core.getBooleanInput('include-latest-version');
   const includeSupportInfo = core.getBooleanInput('include-support-info');
   const customApiUrl =
@@ -134,8 +132,7 @@ export function getInputs(): ActionInputs {
     outputFile,
     cacheTtl,
     githubToken,
-    createIssueOnEol,
-    issueLabels,
+
     includeLatestVersion,
     includeSupportInfo,
     customApiUrl,
@@ -227,12 +224,6 @@ export function validateInputs(inputs: ActionInputs): void {
 
   if (!['json', 'markdown', 'summary'].includes(inputs.outputFormat)) {
     throw new Error('Output format must be json, markdown, or summary');
-  }
-
-  if (inputs.createIssueOnEol && !inputs.githubToken) {
-    throw new Error(
-      'GitHub token is required when create-issue-on-eol is enabled'
-    );
   }
 
   if (inputs.useDashboard && !inputs.githubToken) {

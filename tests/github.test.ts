@@ -113,78 +113,7 @@ describe('GitHubIntegration', () => {
         ghIntegration = new GitHubIntegration('test-token');
     });
 
-    describe('createEolIssue', () => {
-        it('should create a new issue when no similar issue exists', async () => {
-            mockOctokit.rest.issues.listForRepo.mockResolvedValue({
-                data: [],
-            });
 
-            mockOctokit.rest.issues.create.mockResolvedValue({
-                data: { number: 123 },
-            });
-
-            const issueNumber = await ghIntegration.createEolIssue(mockResults, [
-                'eol',
-                'dependencies',
-            ]);
-
-            expect(issueNumber).toBe(123);
-            expect(mockOctokit.rest.issues.listForRepo).toHaveBeenCalledWith({
-                owner: 'test-owner',
-                repo: 'test-repo',
-                state: 'open',
-                labels: 'eol,dependencies',
-                per_page: 10,
-            });
-            expect(mockOctokit.rest.issues.create).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    owner: 'test-owner',
-                    repo: 'test-repo',
-                    labels: ['eol', 'dependencies'],
-                    title: expect.stringContaining('End-of-Life Software Detected'),
-                })
-            );
-        });
-
-        it('should add comment to existing issue instead of creating new one', async () => {
-            const existingIssue = {
-                number: 456,
-                title: '🚨 End-of-Life Software Detected - 2024-01-01',
-            };
-
-            mockOctokit.rest.issues.listForRepo.mockResolvedValue({
-                data: [existingIssue],
-            });
-
-            const issueNumber = await ghIntegration.createEolIssue(mockResults, [
-                'eol',
-            ]);
-
-            expect(issueNumber).toBe(456);
-            expect(mockOctokit.rest.issues.createComment).toHaveBeenCalledWith({
-                owner: 'test-owner',
-                repo: 'test-repo',
-                issue_number: 456,
-                body: expect.stringContaining('Updated EOL Detection'),
-            });
-            expect(mockOctokit.rest.issues.create).not.toHaveBeenCalled();
-        });
-
-        it('should return null on error', async () => {
-            mockOctokit.rest.issues.listForRepo.mockRejectedValue(
-                new Error('API error')
-            );
-
-            const issueNumber = await ghIntegration.createEolIssue(mockResults, [
-                'eol',
-            ]);
-
-            expect(issueNumber).toBeNull();
-            expect(core.error).toHaveBeenCalledWith(
-                expect.stringContaining('Failed to create or update GitHub issue')
-            );
-        });
-    });
 
     describe('addLabels', () => {
         it('should add labels to an issue', async () => {
