@@ -1,5 +1,24 @@
 # Changelog
 
+## [4.4.2](https://github.com/broadsage/lifecycle-action/compare/v4.4.1...v4.4.2) (2026-01-12)
+
+
+### Code Refactoring
+
+* remove EOL individual issue tracking and consolidate to dashboard ([a2cb933](https://github.com/broadsage/lifecycle-action/commit/a2cb9330c6a684754ae20fbe05b03f52f793ad9d))
+* remove EOL individual issue tracking and consolidate to dashboard ([a2cb933](https://github.com/broadsage/lifecycle-action/commit/a2cb9330c6a684754ae20fbe05b03f52f793ad9d))
+* remove EOL individual issue tracking and consolidate to dashboard ([33dce47](https://github.com/broadsage/lifecycle-action/commit/33dce47972191ba38632d75d71ec1be397a132a2))
+
+
+### Miscellaneous
+
+* **deps:** update @types/node to v24 ([55c6275](https://github.com/broadsage/lifecycle-action/commit/55c6275d6d1294bb94ba031c3223c4c0fd61827c))
+* **deps:** update @types/node to v24 ([55c6275](https://github.com/broadsage/lifecycle-action/commit/55c6275d6d1294bb94ba031c3223c4c0fd61827c))
+* **deps:** update @types/node to v24 ([7d6322b](https://github.com/broadsage/lifecycle-action/commit/7d6322b9224daecb299c3ed230011dd71b8ce129))
+* **deps:** update fast-check to ^3.23.2 ([#39](https://github.com/broadsage/lifecycle-action/issues/39)) ([d004807](https://github.com/broadsage/lifecycle-action/commit/d004807c8ec848313a8b3fec2063626a534f799f))
+* **deps:** update Jest ([#40](https://github.com/broadsage/lifecycle-action/issues/40)) ([7fb1569](https://github.com/broadsage/lifecycle-action/commit/7fb1569d8941d284b35f4933d667c887d45c322d))
+* **deps:** update TypeScript ([#42](https://github.com/broadsage/lifecycle-action/issues/42)) ([7fafc05](https://github.com/broadsage/lifecycle-action/commit/7fafc05717d0b4e4fd5bfc99903f218582122f5a))
+
 ## [4.4.1](https://github.com/broadsage/lifecycle-action/compare/v4.4.0...v4.4.1) (2026-01-10)
 
 
