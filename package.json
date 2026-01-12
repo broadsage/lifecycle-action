@@ -1,6 +1,6 @@
 {
   "name": "lifecycle-action",
-  "version": "4.4.1",
+  "version": "4.4.2",
   "description": "Automate software lifecycle tracking with intelligent EOL detection, multi-channel notifications, and seamless CI/CD integration",
   "main": "dist/index.js",
   "scripts": {
