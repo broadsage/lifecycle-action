@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.4.1](https://github.com/broadsage/lifecycle-action/compare/v4.4.0...v4.4.1) (2026-01-10)
+
+
+### Documentation
+
+* add dashboard overview image ([f2928c0](https://github.com/broadsage/lifecycle-action/commit/f2928c019f02ffe823445b17c672f3d4f59faa2c))
+* add dashboard overview image ([f2928c0](https://github.com/broadsage/lifecycle-action/commit/f2928c019f02ffe823445b17c672f3d4f59faa2c))
+
 ## [4.4.0](https://github.com/broadsage/lifecycle-action/compare/v4.3.0...v4.4.0) (2026-01-09)
 
 
