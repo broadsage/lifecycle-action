@@ -1,5 +1,20 @@
 # Changelog
 
+## [4.4.3](https://github.com/broadsage/lifecycle-action/compare/v4.4.2...v4.4.3) (2026-01-29)
+
+
+### Miscellaneous
+
+* **deps:** update @types/node to ^24.10.9 ([#45](https://github.com/broadsage/lifecycle-action/issues/45)) ([c6f945b](https://github.com/broadsage/lifecycle-action/commit/c6f945bd80e53b18aa43764ee5ad4312175bec2d))
+* **deps:** update all non-major dependencies ([3e0e80d](https://github.com/broadsage/lifecycle-action/commit/3e0e80d20783611a240f5a767b633b1f8e3e5fb7))
+* **deps:** update all non-major dependencies ([ba63c16](https://github.com/broadsage/lifecycle-action/commit/ba63c165532af075254683f4c1ff397522855a03))
+* **deps:** update fast-check to v4 ([394013d](https://github.com/broadsage/lifecycle-action/commit/394013d22c9fb33fa44fcc0353dcee933ab22b5a))
+* **deps:** update fast-check to v4 ([78c1ef0](https://github.com/broadsage/lifecycle-action/commit/78c1ef00a46661145aae69e72999f4f353ecaf3e))
+* **deps:** update GitHub Actions ([9f23c36](https://github.com/broadsage/lifecycle-action/commit/9f23c3655e0e0faeeb86b1e932cc9761c9386753))
+* **deps:** update GitHub Actions (major) ([8ce3cd4](https://github.com/broadsage/lifecycle-action/commit/8ce3cd485da166208707e9011dad0210e11571a1))
+* **deps:** update github/codeql-action action to v3.31.10 ([#46](https://github.com/broadsage/lifecycle-action/issues/46)) ([f0bef78](https://github.com/broadsage/lifecycle-action/commit/f0bef7812bf7ac5f43e49083ce5326d1f51a4cf9))
+* **deps:** update github/codeql-action action to v3.31.11 ([#52](https://github.com/broadsage/lifecycle-action/issues/52)) ([694a8f0](https://github.com/broadsage/lifecycle-action/commit/694a8f03bff767edbf08d9ee8df8195e423bd0b8))
+
 ## [4.4.2](https://github.com/broadsage/lifecycle-action/compare/v4.4.1...v4.4.2) (2026-01-12)
 
 
