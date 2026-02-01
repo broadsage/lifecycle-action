@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.4.4](https://github.com/broadsage/lifecycle-action/compare/v4.4.3...v4.4.4) (2026-02-01)
+
+
+### Miscellaneous
+
+* **deps:** refresh ([#54](https://github.com/broadsage/lifecycle-action/issues/54)) ([d4762d8](https://github.com/broadsage/lifecycle-action/commit/d4762d89e845c64a4b8e2a31c4fc79f0b6b0f858))
+
 ## [4.4.3](https://github.com/broadsage/lifecycle-action/compare/v4.4.2...v4.4.3) (2026-01-29)
 
 
