@@ -1,5 +1,15 @@
 # Changelog
 
+## [4.4.4](https://github.com/broadsage/lifecycle-action/compare/v4.4.3...v4.4.4) (2026-02-18)
+
+
+### Miscellaneous
+
+* **deps:** refresh ([#54](https://github.com/broadsage/lifecycle-action/issues/54)) ([d4762d8](https://github.com/broadsage/lifecycle-action/commit/d4762d89e845c64a4b8e2a31c4fc79f0b6b0f858))
+* **deps:** update husky to v9 ([1936766](https://github.com/broadsage/lifecycle-action/commit/1936766be4edf926b88bc91371c3edfbd907ce3b))
+* **deps:** update husky to v9 ([2a53056](https://github.com/broadsage/lifecycle-action/commit/2a5305635dc5b4426f8d20ff3e2406d54fc8e6a4))
+* **deps:** update step-security/harden-runner action to v2.14.1 ([#56](https://github.com/broadsage/lifecycle-action/issues/56)) ([0d989f3](https://github.com/broadsage/lifecycle-action/commit/0d989f3e148fd20ec4d847192a085642c6eb926c))
+
 ## [4.4.3](https://github.com/broadsage/lifecycle-action/compare/v4.4.2...v4.4.3) (2026-01-29)
 
 
